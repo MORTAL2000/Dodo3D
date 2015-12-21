@@ -24,6 +24,9 @@ LDFLAGS = -g
  
 default: all
 
+debug: CCFLAGS = -DDEBUG -g -Wall
+debug: all
+
 all : $(OUT)
  
 .cpp.o:

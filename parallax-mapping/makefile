@@ -26,6 +26,9 @@ default: all
 
 all: $(OUT)
  
+debug: CCFLAGS = -DDEBUG -g -Wall
+debug: all
+
 .cpp.o:
 	$(CCC) $(INCLUDES) $(CCFLAGS) -c $< -o $@
  

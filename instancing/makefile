@@ -10,7 +10,7 @@ INCLUDES = -I../dodo/include
  
 # C++ compiler flags (-g -O2 -Wall)
 CCFLAGS = -g -O2 -Wall
- 
+
 # compiler
 CCC = g++
  
@@ -23,6 +23,9 @@ LDFLAGS = -g
 .SUFFIXES: .cpp
  
 default: all 
+
+debug: CCFLAGS = -DDEBUG -g -Wall
+debug: all
 
 all: $(OUT)
  

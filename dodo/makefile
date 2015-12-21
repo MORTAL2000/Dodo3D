@@ -18,7 +18,10 @@ CCC = g++
 .SUFFIXES: .cpp
  
 default: all
- 
+
+debug: CCFLAGS = -DDEBUG -g -Wall
+debug: all
+
 bin/%.o: src/%.cpp
 	$(CCC) $(INCLUDES) $(CCFLAGS) -c -o $@ $<
  
