@@ -652,11 +652,9 @@ void RenderManager::SetDrawBuffers( u32 n, u32* buffers )
     buffer[i] = GL_COLOR_ATTACHMENT0 + buffers[i];
   }
 
-  glDrawBuffers( n, buffer );
+  CHECK_GL_ERROR( glDrawBuffers( n, buffer ) );
   delete[] buffer;
 }
-
-
 
 void RenderManager::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level )
 {
