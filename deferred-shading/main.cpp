@@ -186,9 +186,9 @@ public:
 
     //Create GBuffer
     mFbo =  mRenderManager.AddFrameBuffer();
-    mColorAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_RGBA8 ));
-    mNormalAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_GL_DEPTH_STENCIL ));
+    mColorAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_RGBA8 ), false);
+    mNormalAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_RGBA8 ), false);
+    mDepthStencilAttachment = mRenderManager.Add2DTexture( Dodo::Image( mWindowSize.x, mWindowSize.y, 0, Dodo::FORMAT_GL_DEPTH_STENCIL ), false);
     mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
     mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 1, mNormalAttachment );
     mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
