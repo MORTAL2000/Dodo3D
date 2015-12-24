@@ -754,7 +754,28 @@ T Lerp( const T& a, const T& b, f32 t )
   return a + t * (b - a);
 }
 
+template< typename T>
+Vector<T,4> operator*( const Vector<T,4>& v, const Matrix<T,4,4>& m)
+{
+  Vector<T,4> result;
+  result.x = Dot( v, vec4( m.c00, m.c01, m.c02, m.c03 ));
+  result.y = Dot( v, vec4( m.c10, m.c11, m.c12, m.c13 ));
+  result.z = Dot( v, vec4( m.c20, m.c21, m.c22, m.c23 ));
+  result.w = Dot( v, vec4( m.c30, m.c31, m.c32, m.c33 ));
 
+  return result;
+}
+
+template< typename T>
+Vector<T,3> operator*( const Vector<T,3>& v, const Matrix<T,3,3>& m)
+{
+  Vector<T,3> result;
+  result.x = Dot( v, vec3( m.c00, m.c01, m.c02 ));
+  result.y = Dot( v, vec3( m.c10, m.c11, m.c12 ));
+  result.z = Dot( v, vec3( m.c20, m.c21, m.c22 ));
+
+  return result;
+}
 
 //Print
 template <typename T, u32 ROWS, u32 COLUMNS>

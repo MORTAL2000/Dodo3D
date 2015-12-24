@@ -15,7 +15,7 @@ TxManager::TxManager()
 
 TxManager::TxManager( size_t size )
 :mComponentList( new ComponentList<TxComponent>(size) ),
- mParentId( new Id[size] ),
+ mParentId( new TxId[size] ),
  mTxLocal( new mat4[size]),
  mTx( new mat4[size])
 {
@@ -30,22 +30,22 @@ TxManager::~TxManager()
   delete[] mTx;
 }
 
-Id TxManager::CreateTransform( vec3 position, vec3 scale, quat orientation )
+TxId TxManager::CreateTransform( vec3 position, vec3 scale, quat orientation )
 {
   return mComponentList->Add( TxComponent( position, scale, orientation ) );
 }
 
-Id TxManager::CreateTransform(  const TxComponent& txComponent )
+TxId TxManager::CreateTransform(  const TxComponent& txComponent )
 {
   return mComponentList->Add( txComponent );
 }
 
-bool TxManager::DestroyTransform( Id id )
+bool TxManager::DestroyTransform( TxId id )
 {
   return mComponentList->Remove( id );
 }
 
-bool TxManager::GetTransform( Id id,  TxComponent* component) const
+bool TxManager::GetTransform( TxId id,  TxComponent* component) const
 {
   TxComponent* c = mComponentList->GetElement(id);
   if( c )
@@ -59,7 +59,7 @@ bool TxManager::GetTransform( Id id,  TxComponent* component) const
   }
 }
 
-bool TxManager::UpdateTransform( Id id, const TxComponent& newData )
+bool TxManager::UpdateTransform( TxId id, const TxComponent& newData )
 {
   TxComponent* component = mComponentList->GetElement(id);
   if( component )
@@ -73,7 +73,7 @@ bool TxManager::UpdateTransform( Id id, const TxComponent& newData )
   }
 }
 
-bool TxManager::UpdatePosition( Id id, vec3 position )
+bool TxManager::UpdatePosition( TxId id, vec3 position )
 {
   TxComponent* component = mComponentList->GetElement(id);
   if( component )
@@ -87,7 +87,7 @@ bool TxManager::UpdatePosition( Id id, vec3 position )
   }
 }
 
-bool TxManager::UpdateScale( Id id, vec3 scale )
+bool TxManager::UpdateScale( TxId id, vec3 scale )
 {
   TxComponent* component = mComponentList->GetElement(id);
   if( component )
@@ -101,7 +101,7 @@ bool TxManager::UpdateScale( Id id, vec3 scale )
   }
 }
 
-bool TxManager::UpdateOrientation( Id id, quat orientation)
+bool TxManager::UpdateOrientation( TxId id, quat orientation)
 {
   TxComponent* component = mComponentList->GetElement(id);
   if( component )
@@ -115,7 +115,7 @@ bool TxManager::UpdateOrientation( Id id, quat orientation)
   }
 }
 
-bool TxManager::SetParent( Id id, Id parentId )
+bool TxManager::SetParent( TxId id, TxId parentId )
 {
   size_t index;
   if( mComponentList->GetIndexFromId( id, &index ) )
@@ -129,7 +129,7 @@ bool TxManager::SetParent( Id id, Id parentId )
   }
 }
 
-Id TxManager::GetParent( Id id ) const
+TxId TxManager::GetParent( TxId id ) const
 {
   size_t index;
   if( mComponentList->GetIndexFromId( id, &index ) )
@@ -142,7 +142,7 @@ Id TxManager::GetParent( Id id ) const
   }
 }
 
-bool TxManager::GetWorldTransform( Id id, mat4* tx )
+bool TxManager::GetWorldTransform( TxId id, mat4* tx )
 {
   size_t index;
   if( mComponentList->GetIndexFromId( id, &index ) )
@@ -156,7 +156,7 @@ bool TxManager::GetWorldTransform( Id id, mat4* tx )
   }
 }
 
-bool TxManager::GetLocalTransform( Id id, mat4* tx )
+bool TxManager::GetLocalTransform( TxId id, mat4* tx )
 {
   size_t index;
   if( mComponentList->GetIndexFromId( id, &index ) )
@@ -175,7 +175,7 @@ void TxManager::Update()
   //Calculate the level in the hierarchy of each component.
   //TODO: Use tasks?
   size_t parentIndex;
-  Id parentId;
+  TxId parentId;
   size_t componentCount( mComponentList->Size() );
   for( size_t i(0); i<componentCount; ++i )
   {

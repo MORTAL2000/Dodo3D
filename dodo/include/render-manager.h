@@ -141,6 +141,8 @@ struct RenderManager
 
   FBOId AddFrameBuffer();
   void BindFrameBuffer( FBOId fbo );
+  void ClearColorAttachment( u32 index, const vec4& value );
+  void SetDrawBuffers( u32 n, u32* buffers );
   void RemoveFrameBuffer(FBOId fbo);
   void Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level = 0 );
   void AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId texture, u32 level = 0 );

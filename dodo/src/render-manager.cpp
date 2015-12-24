@@ -119,26 +119,43 @@ bool GetTextureGLFormat( TextureFormat format, GLenum& dataFormat, GLenum& inter
   switch( format )
   {
     case Dodo::FORMAT_GL_DEPTH:
+    {
       dataFormat =  GL_DEPTH_COMPONENT;
       internalFormat = GL_DEPTH_COMPONENT;
       break;
+    }
     case Dodo::FORMAT_GL_DEPTH_STENCIL:
+    {
       dataFormat = GL_DEPTH_STENCIL;
       internalFormat = GL_DEPTH24_STENCIL8;
       dataType = GL_UNSIGNED_INT_24_8;
       break;
+    }
     case Dodo::FORMAT_RGB8:
+    {
       dataFormat = GL_RGB;
       internalFormat = GL_RGB8;
       break;
+    }
     case Dodo::FORMAT_RGBA8:
+    {
       dataFormat = GL_RGBA;
       internalFormat = GL_RGBA8;
       break;
+    }
     case Dodo::FORMAT_R8:
+    {
       dataFormat = GL_LUMINANCE;
       internalFormat = GL_LUMINANCE8;
       break;
+    }
+    case Dodo::FORMAT_RGBA32F:
+    {
+      dataFormat = GL_RGBA;
+      internalFormat = GL_RGBA32F;
+      dataType = GL_FLOAT;
+      break;
+    }
     default:  //@TODO: Implement the rest
     {
       return false;
@@ -627,6 +644,19 @@ void RenderManager::BindFrameBuffer( FBOId fbo )
   }
 }
 
+void RenderManager::SetDrawBuffers( u32 n, u32* buffers )
+{
+  GLenum* buffer = new GLenum[n];
+  for( u32 i(0); i<n; ++i )
+  {
+    buffer[i] = GL_COLOR_ATTACHMENT0 + buffers[i];
+  }
+
+  glDrawBuffers( n, buffer );
+  delete[] buffer;
+}
+
+
 
 void RenderManager::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level )
 {
@@ -642,6 +672,11 @@ void RenderManager::AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId
   BindFrameBuffer( fbo );
   CHECK_GL_ERROR( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texture, level  ) );
   BindFrameBuffer( currentFBO );
+}
+
+void RenderManager::ClearColorAttachment( u32 index, const vec4& value )
+{
+  CHECK_GL_ERROR( glClearBufferfv( GL_COLOR, index, value.data ));
 }
 
 VAOId RenderManager::AddVAO()
@@ -1065,10 +1100,13 @@ void RenderManager::SetViewport( s32 x, s32 y, size_t width, size_t height )
 
 void RenderManager::SetCullFace( CullFace cullFace )
 {
-  if( cullFace == CULL_NONE && mIsCullFaceEnabled )
+  if( cullFace == CULL_NONE )
   {
-    CHECK_GL_ERROR(glDisable(GL_CULL_FACE));
-    mIsCullFaceEnabled = false;
+    if( mIsCullFaceEnabled )
+    {
+      CHECK_GL_ERROR(glDisable(GL_CULL_FACE));
+      mIsCullFaceEnabled = false;
+    }
   }
   else
   {
@@ -1095,10 +1133,13 @@ void RenderManager::SetCullFace( CullFace cullFace )
 
 void RenderManager::SetDepthTest( DepthTestFunction function)
 {
-  if( function == DEPTH_TEST_DISABLED && mIsDepthTestEnabled )
+  if( function == DEPTH_TEST_DISABLED  )
   {
-    CHECK_GL_ERROR(glDisable(GL_DEPTH_TEST));
-    mIsDepthTestEnabled = false;
+    if( mIsDepthTestEnabled )
+    {
+      CHECK_GL_ERROR(glDisable(GL_DEPTH_TEST));
+      mIsDepthTestEnabled = false;
+    }
   }
   else
   {
@@ -1171,10 +1212,13 @@ void RenderManager::Wired( bool wired)
 
 void RenderManager::SetBlendingMode(BlendingMode mode)
 {
-  if( mode == BLEND_DISABLED && mIsBlendingEnabled )
+  if( mode == BLEND_DISABLED )
   {
-    CHECK_GL_ERROR(glDisable(GL_BLEND));
-    mIsBlendingEnabled = false;
+    if( mIsBlendingEnabled )
+    {
+      CHECK_GL_ERROR(glDisable(GL_BLEND));
+      mIsBlendingEnabled = false;
+    }
   }
   else
   {

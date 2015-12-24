@@ -8,6 +8,8 @@
 namespace Dodo
 {
 
+typedef Id  TxId;
+
 struct TxComponent
 {
   TxComponent()
@@ -30,21 +32,21 @@ struct TxManager
   TxManager( size_t size );
   ~TxManager();
 
-  Id CreateTransform( vec3 position = VEC3_ZERO, vec3 scale = VEC3_ONE, quat orientation = QUAT_UNIT );
-  Id CreateTransform(  const TxComponent& txComponent );
-  bool DestroyTransform( Id id );
-  bool GetTransform( Id id,  TxComponent* component) const;
+  TxId CreateTransform( vec3 position = VEC3_ZERO, vec3 scale = VEC3_ONE, quat orientation = QUAT_UNIT );
+  TxId CreateTransform(  const TxComponent& txComponent );
+  bool DestroyTransform( TxId id );
+  bool GetTransform( TxId id,  TxComponent* component) const;
 
-  bool UpdateTransform( Id id, const TxComponent& newData );
-  bool UpdatePosition( Id id, vec3 position );
-  bool UpdateScale( Id id, vec3 scale );
-  bool UpdateOrientation( Id id, quat orientation);
+  bool UpdateTransform( TxId id, const TxComponent& newData );
+  bool UpdatePosition( TxId id, vec3 position );
+  bool UpdateScale( TxId id, vec3 scale );
+  bool UpdateOrientation( TxId id, quat orientation);
 
-  bool SetParent( Id id, Id parentId );
-  Id GetParent( Id id ) const;
+  bool SetParent( TxId id, Id parentId );
+  TxId GetParent( TxId id ) const;
 
-  bool GetWorldTransform( Id id, mat4* tx );
-  bool GetLocalTransform( Id id, mat4* tx );
+  bool GetWorldTransform( TxId id, mat4* tx );
+  bool GetLocalTransform( TxId id, mat4* tx );
 
   void Update();
 
@@ -69,7 +71,7 @@ private:
   ComponentList<TxComponent>*  mComponentList;
   std::vector<SOrderItem>   mOrderedComponents; ///< List of components ordered by its level in hierarchy
 
-  Id*                       mParentId;    ///< Id of the parent of the component
+  TxId*                       mParentId;    ///< Id of the parent of the component
   mat4*                     mTxLocal;           ///< Local transform of the component
   mat4*                     mTx;                ///< World transform of the component
 
