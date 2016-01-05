@@ -1,5 +1,5 @@
 # source files.
-SRC =  	main.cpp
+SRC = model.cpp
  
 OBJ = $(SRC:.cpp=.o)
  

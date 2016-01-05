@@ -81,7 +81,7 @@ private:
   Display*    mDisplay;
   Window      mWindow;
   GLXContext  mContext;
-  f32         mTimeDelta;
+  f32         mTimeDelta; //milliseconds
   f32         mTimePrev;
 };
 

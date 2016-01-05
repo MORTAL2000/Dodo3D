@@ -1,5 +1,5 @@
 # source files.
-SRC =  	main.cpp
+SRC = terrain.cpp
  
 OBJ = $(SRC:.cpp=.o)
  

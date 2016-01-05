@@ -1,5 +1,5 @@
 # source files.
-SRC =  	main.cpp
+SRC = normal-mapping.cpp
  
 OBJ = $(SRC:.cpp=.o)
  

@@ -1,0 +1,16 @@
+.cproject
+.project
+.settings
+.directory
+Makefile.in
+Makefile
+*~
+*.pc
+*.o
+*.o.d
+*.lo
+*.loT
+*.la
+*.so
+*.orig
+*.a

@@ -156,6 +156,17 @@ Vector<T,N> operator-( const Vector<T,N>& v0, const Vector<T,N>& v1 )
   return result;
 }
 
+template <typename T, u32 N>
+Vector<T,N> Negate( const Vector<T,N>& v0 )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = -v0.data[i];
+  }
+  return result;
+}
+
 //Component-wise multiplication
 template <typename T, u32 N>
 Vector<T,N> operator*( const Vector<T,N>& v0, const Vector<T,N>& v1 )

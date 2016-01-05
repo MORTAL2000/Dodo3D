@@ -1,5 +1,5 @@
 # source files.
-SRC =  	main.cpp
+SRC =  parallax-mapping.cpp
  
 OBJ = $(SRC:.cpp=.o)
  

@@ -15,29 +15,29 @@ namespace
 u32 gFrameCount = 0u;
 
 const char* gVertexShader[] = {
-                                     "#version 440 core\n"
-                                     "#extension GL_EXT_gpu_shader4: enable\n"
-                                     "layout (location = 0 ) in vec3 aPosition;\n"
-                                     "layout (location = 4 ) in vec4 aInstanceColor;\n"
-                                     "layout (std140, binding=0) buffer ModelMatrices\n"
-                                     "{\n "
-                                     "  mat4 uModelMatrix[];\n"
-                                     "};\n"
-                                     "out vec4 color;\n"
-                                     "void main(void)\n"
-                                     "{\n"
-                                     "  gl_Position = uModelMatrix[gl_InstanceID] * vec4(aPosition,1.0);\n"
-                                     "  color = aInstanceColor;\n"
-                                     "}\n"
+                               "#version 440 core\n"
+                               "#extension GL_EXT_gpu_shader4: enable\n"
+                               "layout (location = 0 ) in vec3 aPosition;\n"
+                               "layout (location = 4 ) in vec4 aInstanceColor;\n"
+                               "layout (std140, binding=0) buffer ModelMatrices\n"
+                               "{\n "
+                               "  mat4 uModelMatrix[];\n"
+                               "};\n"
+                               "out vec4 color;\n"
+                               "void main(void)\n"
+                               "{\n"
+                               "  gl_Position = uModelMatrix[gl_InstanceID] * vec4(aPosition,1.0);\n"
+                               "  color = aInstanceColor;\n"
+                               "}\n"
 };
 const char* gFragmentShader[] = {
-                                       "#version 440 core\n"
-                                       "out vec4 outputColor;\n"
-                                       "in vec4 color;\n"
-                                       "void main(void)\n"
-                                       "{\n"
-                                       "  outputColor = color;\n"
-                                       "}\n"
+                                 "#version 440 core\n"
+                                 "out vec4 outputColor;\n"
+                                 "in vec4 color;\n"
+                                 "void main(void)\n"
+                                 "{\n"
+                                 "  outputColor = color;\n"
+                                 "}\n"
 };
 
 u32 gQuadCount = 500.0f;
@@ -48,7 +48,7 @@ class App : public Dodo::Application
 {
 public:
   App()
- :Dodo::Application("Demo",500,500,4,4)
+:Dodo::Application("Demo",500,500,4,4)
   {}
 
   ~App()

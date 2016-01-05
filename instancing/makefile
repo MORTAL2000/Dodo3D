@@ -1,5 +1,5 @@
 # source files.
-SRC =  	main.cpp
+SRC = instancing.cpp
  
 OBJ = $(SRC:.cpp=.o)
  
