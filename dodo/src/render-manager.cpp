@@ -726,6 +726,7 @@ MeshId RenderManager::AddMesh( const char* path )
     bool bHasUV( mesh->HasTextureCoords(0) );
     bool bHasColor( mesh->HasVertexColors(0) );
     bool bHasNormal(mesh->HasNormals() );
+    bool bHasTangent(mesh->HasTangentsAndBitangents() );
 
     u32 vertexSize = 3;
     if( bHasUV)
@@ -734,6 +735,8 @@ MeshId RenderManager::AddMesh( const char* path )
       vertexSize += 4;
     if(bHasNormal)
       vertexSize += 3;
+    if(bHasTangent )
+      vertexSize += 6;
 
     size_t vertexBufferSize( newMesh.mVertexCount * vertexSize * sizeof(f32) );
     f32* vertexData = new f32[ newMesh.mVertexCount * vertexSize ];
@@ -792,6 +795,17 @@ MeshId RenderManager::AddMesh( const char* path )
         vertexData[index++] = mesh->mNormals[vertex].y;
         vertexData[index++] = mesh->mNormals[vertex].z;
       }
+
+      if( bHasTangent )
+      {
+        vertexData[index++] = mesh->mTangents[vertex].x;
+        vertexData[index++] = mesh->mTangents[vertex].y;
+        vertexData[index++] = mesh->mTangents[vertex].z;
+
+        vertexData[index++] = mesh->mBitangents[vertex].x;
+        vertexData[index++] = mesh->mBitangents[vertex].y;
+        vertexData[index++] = mesh->mBitangents[vertex].z;
+      }
     }
 
     u32* indices(0);
@@ -839,6 +853,11 @@ MeshId RenderManager::AddMesh( const char* path )
     if( bHasNormal )
     {
       newMesh.mVertexFormat.SetAttribute(VERTEX_NORMAL, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+    }
+    if( bHasTangent )
+    {
+      newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_4, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+      newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_5, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
     }
   }
 

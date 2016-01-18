@@ -61,7 +61,9 @@ struct ComponentList
       if( index < mSize-1 )
       {
         mData[index] = mData[mSize-1];
-        mHash->Set( mId[index], index );
+        Id lastItemId = mId[mSize-1];
+        mHash->Set( lastItemId, index );
+        mId[index] = lastItemId;
       }
 
       mSize--;

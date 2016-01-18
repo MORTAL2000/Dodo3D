@@ -17,36 +17,46 @@ const char* gVertexShaderSourceDiffuse[] = {
                                             "layout (location = 0 ) in vec3 aPosition;\n"
                                             "layout (location = 1 ) in vec2 aTexCoord;\n"
                                             "layout (location = 2 ) in vec3 aNormal;\n"
-                                            "out vec3 normal;\n"
-                                            "out vec3 lightDirection;\n"
+                                            "layout (location = 4 ) in vec3 aTangent;\n"
+                                            "layout (location = 5 ) in vec3 aBitangent;\n"
+
+                                            "out vec3 lightDirection_tangentspace;\n"
+                                            "out vec3 viewVector_tangentspace;\n"
                                             "out vec2 uv;\n"
                                             "uniform mat4 uModelView;\n"
                                             "uniform mat4 uModelViewProjection;\n"
-                                            "out vec3 viewVector;\n"
                                             "void main(void)\n"
                                             "{\n"
                                             "  gl_Position = uModelViewProjection * vec4(aPosition,1.0);\n"
-                                            "  normal = (uModelView * vec4(aNormal,0.0)).xyz;\n"
-                                            "  lightDirection = normalize((uModelView * vec4( 1.0,0.0,0.0,0.0)).xyz);\n"
-                                            "  viewVector = -normalize( (uModelView * vec4(aPosition,1.0)).xyz);\n"
+                                            "  vec3 normal_cameraspace = (uModelView * vec4(aNormal,0.0)).xyz;\n"
+                                            "  vec3 lightDirection_cameraspace = normalize((uModelView * vec4( 1.0,0.0,0.0,0.0)).xyz);\n"
+                                            "  vec3 viewVector = -normalize( (uModelView * vec4(aPosition,1.0)).xyz);\n"
+
+
+                                            "  vec3 vertexTangent_cameraspace = (uModelView * vec4(aTangent,0.0)).xyz;\n"
+                                            "  vec3 vertexBitangent_cameraspace = (uModelView * vec4(aBitangent,0.0)).xyz;\n"
+                                            "  mat3 TBN = transpose(mat3(vertexTangent_cameraspace,vertexBitangent_cameraspace, normal_cameraspace));\n"
+                                            "  lightDirection_tangentspace = normalize( TBN * lightDirection_cameraspace );\n"
+                                            "  viewVector_tangentspace  = normalize( TBN * viewVector);\n"
                                             "  uv = aTexCoord;\n"
                                             "}\n"
 };
 const char* gFragmentShaderSourceDiffuse[] = {
                                               "#version 440 core\n"
                                               "uniform sampler2D uTexture0;\n"
-                                              "uniform samplerCube uCubeMap;\n"
-                                              "in vec3 normal;\n"
-                                              "in vec3 lightDirection;\n"
+                                              "uniform sampler2D uTexture1;\n"
+                                              "uniform sampler2D uTexture2;\n"
+                                              "in vec3 lightDirection_tangentspace;\n"
+                                              "in vec3 viewVector_tangentspace;\n"
                                               "in vec2 uv;\n"
-                                              "in vec3 viewVector;\n"
                                               "out vec3 color;\n"
                                               "void main(void)\n"
                                               "{\n"
-                                              "  float diffuse = max(0.0,dot( normal,lightDirection ) );\n"
-                                              "  float ambient = 0.2;\n"
-                                              "  vec3 reflection = normalize( -reflect( viewVector, normal));\n"
-                                              " float specular = pow(max(dot(reflection,lightDirection),0.0),100.0);\n"
+                                              "  vec3 normal_tagentspace = normalize(texture2D( uTexture1, uv ).rgb*2.0 - 1.0);\n"
+                                              "  float diffuse = max(0.0,dot( normal_tagentspace,lightDirection_tangentspace ) );\n"
+                                              "  float ambient = 0.3;\n"
+                                              "  vec3 reflection = normalize( -reflect( viewVector_tangentspace, normal_tagentspace));\n"
+                                              " float specular = texture2D( uTexture2, uv ).r * pow(max(dot(reflection,lightDirection_tangentspace),0.0),100.0);\n"
                                               "  color = (diffuse + ambient) * texture(uTexture0, uv ).rgb + vec3(specular,specular,specular);\n"
                                               "}\n"
 };
@@ -119,19 +129,24 @@ const char* gFragmentShaderSkybox[] = {
                                        "}\n"
 };
 
-struct FreeCamera
+struct OrbitingCamera
 {
-  FreeCamera( const vec3& position, const vec2& angle, f32 velocity )
-  :mPosition(position),
+  OrbitingCamera( const f32 offset, const vec2& angle, f32 velocity )
+  :mOffset(offset),
    mAngle(angle),
    mVelocity(velocity)
   {
     UpdateTx();
   }
 
-  void Move( f32 xAmount, f32 zAmount )
+  void Move( f32 amount )
   {
-    mPosition = mPosition + ( zAmount * mVelocity * mForward ) + ( xAmount * mVelocity * mRight );
+    mOffset += amount;
+    if( mOffset < 0.0f )
+    {
+      mOffset = 0.0f;
+    }
+
     UpdateTx();
   }
 
@@ -154,15 +169,15 @@ struct FreeCamera
 
     mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
     mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
+    tx = ComputeTransform(vec3(0.0f,0.0f,mOffset), VEC3_ONE, QUAT_UNIT) * ComputeTransform( VEC3_ZERO, VEC3_ONE, orientation );
 
-    tx = ComputeTransform( mPosition, VEC3_ONE, orientation );
     ComputeInverse( tx, txInverse );
   }
 
   mat4 tx;
   mat4 txInverse;
 
-  vec3 mPosition;
+  f32 mOffset;
   vec3 mForward;
   vec3 mRight;
   vec2 mAngle;
@@ -177,8 +192,7 @@ public:
   App()
 :Application("Demo",500,500,4,4),
  mTxManager(1),
- mAngle(0.0),
- mCamera( vec3(0.0f,0.0f,50.0f), vec2(0.0f,0.0f), 1.0f ),
+ mCamera( 2.0f, vec2(0.0f,0.0f), 1.0f ),
  mMousePosition(0.0f,0.0f),
  mMouseButtonPressed(false)
 {}
@@ -188,13 +202,17 @@ public:
 
   void Init()
   {
-    mTxId0 = mTxManager.CreateTransform();
+
     mProjection = ComputeProjectionMatrix( DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
     ComputeSkyBoxTransform();
 
     //Create a texture
-    Image image("data/jeep.jpg");
+    Image image("data/R2D2_D.tga");
     mColorTexture = mRenderManager.Add2DTexture( image );
+    Image imageNormal("data/R2D2_N.tga");
+    mNormalTexture = mRenderManager.Add2DTexture( imageNormal,false );
+    Image imageSpecular("data/R2D2_S.tga");
+    mSpecularTexture = mRenderManager.Add2DTexture( imageSpecular );
 
     //Create a shader
     mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
@@ -203,8 +221,13 @@ public:
     mSkyboxShader = mRenderManager.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
 
     //Load meshes
-    mMesh = mRenderManager.AddMesh( "data/jeep.ms3d" );
-    mBox = mRenderManager.AddMesh( "data/box.obj" );
+    mMesh = mRenderManager.AddMesh( "data/R2D2.dae" );
+    Mesh mesh = mRenderManager.GetMesh(mMesh);
+
+    mTxId0 = mTxManager.CreateTransform();
+    mTxManager.UpdatePosition( mTxId0, Negate(mesh.mAABB.mCenter) );
+    mTxManager.Update();
+
     mQuad = mRenderManager.CreateQuad(Dodo::uvec2(2u,2u),true,false );
 
     //Set GL state
@@ -232,11 +255,6 @@ public:
 
   void Render()
   {
-    mAngle -=  GetTimeDelta() * 0.001f;
-    quat newOrientation(vec3(0.0f,1.0f,0.0f), mAngle);
-    mTxManager.UpdateTransform( mTxId0, TxComponent( vec3(0.0f,0.0f,0.0f), VEC3_ONE, newOrientation ) );
-    mTxManager.Update();
-
     mRenderManager.BindFrameBuffer( mFbo );
     mRenderManager.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
 
@@ -256,22 +274,14 @@ public:
     mRenderManager.UseProgram( mShader );
     mRenderManager.Bind2DTexture( mColorTexture, 0 );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture0"), 0 );
+    mRenderManager.Bind2DTexture( mNormalTexture, 1 );
+    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture1"), 1 );
+    mRenderManager.Bind2DTexture( mSpecularTexture, 2 );
+    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture2"), 2 );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), modelMatrix * mCamera.txInverse );
     mRenderManager.SetupMeshVertexFormat( mMesh );
     mRenderManager.DrawMesh( mMesh );
-
-    //Draw bounding box
-    mRenderManager.UseProgram( mAABBShader );
-    Mesh mesh = mRenderManager.GetMesh(mMesh);
-    mat4 aabbModel = ComputeTransform( mesh.mAABB.mCenter, 2.0f * mesh.mAABB.mExtents, QUAT_UNIT );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mAABBShader,"uModelViewProjection"), (aabbModel * modelMatrix) * mCamera.txInverse * mProjection );
-    mRenderManager.Wired( true );
-    mRenderManager.SetCullFace( CULL_NONE );
-    mRenderManager.SetupMeshVertexFormat( mBox );
-    mRenderManager.DrawMesh( mBox );
-    mRenderManager.Wired( false );
-    mRenderManager.SetCullFace( CULL_BACK );
 
     //Draw quad with offscreen color buffer
     mRenderManager.BindFrameBuffer( 0 );
@@ -313,28 +323,14 @@ public:
         case KEY_UP:
         case 'w':
         {
-          mCamera.Move( 0.0f, -1.0f );
+          mCamera.Move( -.5f );
           ComputeSkyBoxTransform();
           break;
         }
         case KEY_DOWN:
         case 's':
         {
-          mCamera.Move( 0.0f, 1.0f );
-          ComputeSkyBoxTransform();
-          break;
-        }
-        case KEY_LEFT:
-        case 'a':
-        {
-          mCamera.Move( 1.0f, 0.0f );
-          ComputeSkyBoxTransform();
-          break;
-        }
-        case KEY_RIGHT:
-        case 'd':
-        {
-          mCamera.Move( -1.0f, 0.0f );
+          mCamera.Move( .5f );
           ComputeSkyBoxTransform();
           break;
         }
@@ -370,11 +366,11 @@ private:
 
   TxManager mTxManager;
   TxId mTxId0;
-  f32 mAngle;
 
-  MeshId      mBox;
   MeshId      mMesh;
   TextureId   mColorTexture;
+  TextureId   mNormalTexture;
+  TextureId   mSpecularTexture;
   TextureId   mCubeMap;
   ProgramId   mShader;
 
@@ -387,7 +383,7 @@ private:
   TextureId mColorAttachment;
   TextureId mDepthStencilAttachment;
 
-  FreeCamera mCamera;
+  OrbitingCamera mCamera;
   mat4 mProjection;
   mat4 mProjectionI;
   mat4 mSkyBoxTransform;
