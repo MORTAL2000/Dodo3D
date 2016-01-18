@@ -123,7 +123,9 @@ const char* gFragmentShaderPointLight[] = {
                                            "  vec3 GBufferNormal = normalize( texture(uTexture1,uv).xyz );\n"
                                            "  float attenuation =  ( uRadius - length(uLightPositionViewSpace-GBufferPosition) ) / uRadius;\n"
                                            "  float NdotL = max( 0.0, dot( GBufferNormal, normalize(uLightPositionViewSpace - GBufferPosition) ) );\n "
-                                           "  color = NdotL * attenuation * vec4(uLightColor,1.0) * texture(uTexture0, uv);\n"
+                                           "  vec3 reflection = normalize( -reflect( vec3(0.0,0.0,1.0), GBufferNormal));\n"
+                                           "  float specular = pow(max(dot(reflection,normalize(uLightPositionViewSpace - GBufferPosition)),0.0),100.0);\n"
+                                           "  color = attenuation * ( NdotL * vec4(uLightColor,1.0) * texture(uTexture0, uv) + specular*vec4(uLightColor,1.0) );\n"
                                            "}\n"
 };
 
