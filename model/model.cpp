@@ -207,11 +207,11 @@ public:
     ComputeSkyBoxTransform();
 
     //Create a texture
-    Image image("data/R2D2_D.tga");
+    Image image("data/R2D2_D.png");
     mColorTexture = mRenderManager.Add2DTexture( image );
-    Image imageNormal("data/R2D2_N.tga");
+    Image imageNormal("data/R2D2_N.png");
     mNormalTexture = mRenderManager.Add2DTexture( imageNormal,false );
-    Image imageSpecular("data/R2D2_S.tga");
+    Image imageSpecular("data/R2D2_S.png");
     mSpecularTexture = mRenderManager.Add2DTexture( imageSpecular );
 
     //Create a shader
