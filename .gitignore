@@ -4,6 +4,7 @@
 .directory
 Makefile.in
 Makefile
+*~
 *.pc
 *.o
 *.o.d
