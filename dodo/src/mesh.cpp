@@ -53,3 +53,21 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {
 }
+
+MultiMesh::MultiMesh()
+:mMeshCount(0)
+{}
+
+MultiMesh::~MultiMesh()
+{}
+
+void MultiMesh::AddSubMesh( MeshId meshId )
+{
+  mMesh.push_back( meshId );
+  ++mMeshCount;
+}
+
+//void MultiMesh::AddMaterial( MaterialId materialId )
+//{
+//
+//}

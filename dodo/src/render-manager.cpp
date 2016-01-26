@@ -218,9 +218,159 @@ GLenum GetGLBlendingFunction( BlendingFunction function )
   }
 }
 
+MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManager* renderManager, const char* path )
+{
+  Mesh newMesh;
+
+  const struct aiMesh* mesh = scene->mMeshes[submesh];
+  newMesh.mVertexCount = mesh->mNumVertices;
+
+  bool bHasUV( mesh->HasTextureCoords(0) );
+  bool bHasColor( mesh->HasVertexColors(0) );
+  bool bHasNormal(mesh->HasNormals() );
+  bool bHasTangent(mesh->HasTangentsAndBitangents() );
+
+  u32 vertexSize = 3;
+  if( bHasUV)
+    vertexSize += 2;
+  if( bHasColor )
+    vertexSize += 4;
+  if(bHasNormal)
+    vertexSize += 3;
+  if(bHasTangent )
+    vertexSize += 6;
+
+  size_t vertexBufferSize( newMesh.mVertexCount * vertexSize * sizeof(f32) );
+  f32* vertexData = new f32[ newMesh.mVertexCount * vertexSize ];
+  u32 index(0);
+  vec3 vertexMin( F32_MAX, F32_MAX, F32_MAX );
+  vec3 vertexMax( 0.0f, 0.0f, 0.0f );
+  for( u32 vertex(0); vertex<newMesh.mVertexCount; ++vertex )
+  {
+    vertexData[index++] = mesh->mVertices[vertex].x;
+    vertexData[index++] = mesh->mVertices[vertex].y;
+    vertexData[index++] = mesh->mVertices[vertex].z;
+
+    //Find min and max vertex values
+    if( mesh->mVertices[vertex].x < vertexMin.x )
+    {
+      vertexMin.x = mesh->mVertices[vertex].x;
+    }
+    if( mesh->mVertices[vertex].x > vertexMax.x )
+    {
+      vertexMax.x = mesh->mVertices[vertex].x;
+    }
+    if( mesh->mVertices[vertex].y < vertexMin.y )
+    {
+      vertexMin.y = mesh->mVertices[vertex].y;
+    }
+    if( mesh->mVertices[vertex].y > vertexMax.y )
+    {
+      vertexMax.y = mesh->mVertices[vertex].y;
+    }
+    if( mesh->mVertices[vertex].z < vertexMin.z )
+    {
+      vertexMin.z = mesh->mVertices[vertex].z;
+    }
+    if( mesh->mVertices[vertex].z > vertexMax.z )
+    {
+      vertexMax.z = mesh->mVertices[vertex].z;
+    }
+
+    if( bHasUV )
+    {
+      vertexData[index++] = mesh->mTextureCoords[0][vertex].x;
+      vertexData[index++] = mesh->mTextureCoords[0][vertex].y;
+    }
+
+    if( bHasColor )
+    {
+      vertexData[index++] = mesh->mColors[0][vertex].r;
+      vertexData[index++] = mesh->mColors[0][vertex].g;
+      vertexData[index++] = mesh->mColors[0][vertex].b;
+      vertexData[index++] = mesh->mColors[0][vertex].a;
+    }
+
+    if( bHasNormal )
+    {
+      vertexData[index++] = mesh->mNormals[vertex].x;
+      vertexData[index++] = mesh->mNormals[vertex].y;
+      vertexData[index++] = mesh->mNormals[vertex].z;
+    }
+
+    if( bHasTangent )
+    {
+      vertexData[index++] = mesh->mTangents[vertex].x;
+      vertexData[index++] = mesh->mTangents[vertex].y;
+      vertexData[index++] = mesh->mTangents[vertex].z;
+
+      vertexData[index++] = mesh->mBitangents[vertex].x;
+      vertexData[index++] = mesh->mBitangents[vertex].y;
+      vertexData[index++] = mesh->mBitangents[vertex].z;
+    }
+  }
+
+  u32* indices(0);
+  size_t indexBufferSize(0);
+  if( mesh->HasFaces() )
+  {
+    newMesh.mIndexCount = mesh->mNumFaces * 3; //@WARNING: Assuming triangles!
+    indexBufferSize = newMesh.mIndexCount * sizeof( unsigned int );
+    indices = new u32[newMesh.mIndexCount];
+    for( u32 face(0); face<mesh->mNumFaces; ++face )
+    {
+      indices[face*3] = mesh->mFaces[face].mIndices[0];
+      indices[face*3 + 1] = mesh->mFaces[face].mIndices[1];
+      indices[face*3 + 2] = mesh->mFaces[face].mIndices[2];
+    }
+  }
+
+  //Compute AABB
+  DODO_LOG( "Min: (%f,%f,%f). Max: (%f,%f,%f) ", vertexMin.x, vertexMin.y, vertexMin.z,
+            vertexMax.x, vertexMax.y,vertexMax.z);
+
+  newMesh.mAABB.mCenter = 0.5f * ( vertexMax + vertexMin );
+  newMesh.mAABB.mExtents = newMesh.mAABB.mCenter - vertexMin;
+  DODO_LOG( "Center: (%f,%f,%f). Extents: (%f,%f,%f) ", newMesh.mAABB.mCenter.x, newMesh.mAABB.mCenter.y, newMesh.mAABB.mCenter.z,
+            newMesh.mAABB.mExtents.x, newMesh.mAABB.mExtents.y,newMesh.mAABB.mExtents.z);
+  //Create buffers
+  newMesh.mVertexBuffer = renderManager->AddBuffer( vertexBufferSize, vertexData );
+  delete[] vertexData;
+
+  if( indices )
+  {
+    newMesh.mIndexBuffer = renderManager->AddBuffer( indexBufferSize, indices );
+    delete[] indices;
+  }
+
+  newMesh.mVertexFormat.SetAttribute(VERTEX_POSITION, AttributeDescription( F32x3, 0, vertexSize) );
+  if( bHasUV )
+  {
+    newMesh.mVertexFormat.SetAttribute(VERTEX_UV, AttributeDescription( F32x2, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+  }
+  if( bHasColor )
+  {
+    newMesh.mVertexFormat.SetAttribute(VERTEX_COLOR, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+  }
+  if( bHasNormal )
+  {
+    newMesh.mVertexFormat.SetAttribute(VERTEX_NORMAL, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+  }
+  if( bHasTangent )
+  {
+    newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_4, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+    newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_5, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
+  }
+
+  MeshId meshId( renderManager->AddMesh( newMesh ) );
+  return meshId;
+}
+
 } //unnamed namespace
 RenderManager::RenderManager()
 :mMesh(0)
+,mMultiMesh(0)
+,mCurrentProgram(-1)
 ,mCurrentVertexBuffer(-1)
 ,mCurrentIndexBuffer(-1)
 ,mCurrentVAO(-1)
@@ -237,8 +387,11 @@ void RenderManager::Init()
   glewInit();
 
   mMesh = new ComponentList<Mesh>(MAX_MESH_COUNT);
-  VAOId defaultVAO = AddVAO();
-  BindVAO( defaultVAO );
+  mMultiMesh = new ComponentList<MultiMesh>(MAX_MESH_COUNT);
+
+
+  //Bind a VAO
+  BindVAO( AddVAO() );
 }
 
 RenderManager::~RenderManager()
@@ -359,7 +512,7 @@ void RenderManager::BindShaderStorageBuffer( BufferId bufferId, u32 bindingPoint
 
 TextureId RenderManager::Add2DTexture(const Image& image, bool generateMipmaps)
 {
-  TextureId texture;
+  TextureId texture = 0;
 
   GLenum dataFormat,internalFormat,glDataType;
   if( !GetTextureGLFormat( image.mFormat, dataFormat, internalFormat, glDataType ) )
@@ -388,8 +541,8 @@ TextureId RenderManager::Add2DTexture(const Image& image, bool generateMipmaps)
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
   }
 
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
   mTexture.push_back(texture);
   mTextureSize.push_back( vec3( image.mWidth, image.mHeight, 0.0f ));
@@ -571,7 +724,16 @@ void RenderManager::RemoveProgram( u32 program )
 
 void RenderManager::UseProgram( ProgramId programId )
 {
-  CHECK_GL_ERROR( glUseProgram( programId ) );
+  if( mCurrentProgram != (s32)programId )
+  {
+    CHECK_GL_ERROR( glUseProgram( programId ) );
+    mCurrentProgram = programId;
+  }
+}
+
+ProgramId RenderManager::GetCurrentProgramId()
+{
+  return mCurrentProgram;
 }
 
 s32 RenderManager::GetUniformLocation( ProgramId programId, const char* name )
@@ -704,9 +866,9 @@ void RenderManager::BindVAO( VAOId vao)
 }
 
 
-MeshId RenderManager::AddMesh( const char* path )
+MeshId RenderManager::AddMesh( const char* path, u32 submesh )
 {
-  Mesh newMesh;
+
 
   //Load mesh
   const struct aiScene* scene = NULL;
@@ -717,153 +879,15 @@ MeshId RenderManager::AddMesh( const char* path )
     return INVALID_ID;
   }
 
-  u32 i(0);
-  //for (u32 i(0); i < scene->mNumMeshes; ++i)    //@TODO: Support submeshes
-  {
-    const struct aiMesh* mesh = scene->mMeshes[i];
-    newMesh.mVertexCount = mesh->mNumVertices;
 
-    bool bHasUV( mesh->HasTextureCoords(0) );
-    bool bHasColor( mesh->HasVertexColors(0) );
-    bool bHasNormal(mesh->HasNormals() );
-    bool bHasTangent(mesh->HasTangentsAndBitangents() );
-
-    u32 vertexSize = 3;
-    if( bHasUV)
-      vertexSize += 2;
-    if( bHasColor )
-      vertexSize += 4;
-    if(bHasNormal)
-      vertexSize += 3;
-    if(bHasTangent )
-      vertexSize += 6;
-
-    size_t vertexBufferSize( newMesh.mVertexCount * vertexSize * sizeof(f32) );
-    f32* vertexData = new f32[ newMesh.mVertexCount * vertexSize ];
-    u32 index(0);
-    vec3 vertexMin( F32_MAX, F32_MAX, F32_MAX );
-    vec3 vertexMax( 0.0f, 0.0f, 0.0f );
-    for( u32 vertex(0); vertex<newMesh.mVertexCount; ++vertex )
-    {
-      vertexData[index++] = mesh->mVertices[vertex].x;
-      vertexData[index++] = mesh->mVertices[vertex].y;
-      vertexData[index++] = mesh->mVertices[vertex].z;
-
-      //Find min and max vertex values
-      if( mesh->mVertices[vertex].x < vertexMin.x )
-      {
-        vertexMin.x = mesh->mVertices[vertex].x;
-      }
-      if( mesh->mVertices[vertex].x > vertexMax.x )
-      {
-        vertexMax.x = mesh->mVertices[vertex].x;
-      }
-      if( mesh->mVertices[vertex].y < vertexMin.y )
-      {
-        vertexMin.y = mesh->mVertices[vertex].y;
-      }
-      if( mesh->mVertices[vertex].y > vertexMax.y )
-      {
-        vertexMax.y = mesh->mVertices[vertex].y;
-      }
-      if( mesh->mVertices[vertex].z < vertexMin.z )
-      {
-        vertexMin.z = mesh->mVertices[vertex].z;
-      }
-      if( mesh->mVertices[vertex].z > vertexMax.z )
-      {
-        vertexMax.z = mesh->mVertices[vertex].z;
-      }
-
-      if( bHasUV )
-      {
-        vertexData[index++] = mesh->mTextureCoords[0][vertex].x;
-        vertexData[index++] = mesh->mTextureCoords[0][vertex].y;
-      }
-
-      if( bHasColor )
-      {
-        vertexData[index++] = mesh->mColors[0][vertex].r;
-        vertexData[index++] = mesh->mColors[0][vertex].g;
-        vertexData[index++] = mesh->mColors[0][vertex].b;
-        vertexData[index++] = mesh->mColors[0][vertex].a;
-      }
-
-      if( bHasNormal )
-      {
-        vertexData[index++] = mesh->mNormals[vertex].x;
-        vertexData[index++] = mesh->mNormals[vertex].y;
-        vertexData[index++] = mesh->mNormals[vertex].z;
-      }
-
-      if( bHasTangent )
-      {
-        vertexData[index++] = mesh->mTangents[vertex].x;
-        vertexData[index++] = mesh->mTangents[vertex].y;
-        vertexData[index++] = mesh->mTangents[vertex].z;
-
-        vertexData[index++] = mesh->mBitangents[vertex].x;
-        vertexData[index++] = mesh->mBitangents[vertex].y;
-        vertexData[index++] = mesh->mBitangents[vertex].z;
-      }
-    }
-
-    u32* indices(0);
-    size_t indexBufferSize(0);
-    if( mesh->HasFaces() )
-    {
-      newMesh.mIndexCount = mesh->mNumFaces * 3; //@WARNING: Assuming triangles!
-      indexBufferSize = newMesh.mIndexCount * sizeof( unsigned int );
-      indices = new u32[newMesh.mIndexCount];
-      for( u32 face(0); face<mesh->mNumFaces; ++face )
-      {
-        indices[face*3] = mesh->mFaces[face].mIndices[0];
-        indices[face*3 + 1] = mesh->mFaces[face].mIndices[1];
-        indices[face*3 + 2] = mesh->mFaces[face].mIndices[2];
-      }
-    }
-
-    //Compute AABB
-    DODO_LOG( "Min: (%f,%f,%f). Max: (%f,%f,%f) ", vertexMin.x, vertexMin.y, vertexMin.z,
-              vertexMax.x, vertexMax.y,vertexMax.z);
-
-    newMesh.mAABB.mCenter = 0.5f * ( vertexMax + vertexMin );
-    newMesh.mAABB.mExtents = newMesh.mAABB.mCenter - vertexMin;
-    DODO_LOG( "Center: (%f,%f,%f). Extents: (%f,%f,%f) ", newMesh.mAABB.mCenter.x, newMesh.mAABB.mCenter.y, newMesh.mAABB.mCenter.z,
-                                                          newMesh.mAABB.mExtents.x, newMesh.mAABB.mExtents.y,newMesh.mAABB.mExtents.z);
-    //Create buffers
-    newMesh.mVertexBuffer = AddBuffer( vertexBufferSize, vertexData );
-    delete[] vertexData;
-
-    if( indices )
-    {
-      newMesh.mIndexBuffer = AddBuffer( indexBufferSize, indices );
-      delete[] indices;
-    }
-
-    newMesh.mVertexFormat.SetAttribute(VERTEX_POSITION, AttributeDescription( F32x3, 0, vertexSize) );
-    if( bHasUV )
-    {
-      newMesh.mVertexFormat.SetAttribute(VERTEX_UV, AttributeDescription( F32x2, newMesh.mVertexFormat.VertexSize(), vertexSize) );
-    }
-    if( bHasColor )
-    {
-      newMesh.mVertexFormat.SetAttribute(VERTEX_COLOR, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
-    }
-    if( bHasNormal )
-    {
-      newMesh.mVertexFormat.SetAttribute(VERTEX_NORMAL, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
-    }
-    if( bHasTangent )
-    {
-      newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_4, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
-      newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_5, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
-    }
-  }
-
-  MeshId meshId( mMesh->Add( newMesh ) );
-  return meshId;
+  return AddSubMeshFromFile( scene, 0, this, path );
 }
+
+MeshId RenderManager::AddMesh( const Mesh& m )
+{
+  return mMesh->Add( m );
+}
+
 
 MeshId RenderManager::AddMesh( const void* vertexData, size_t vertexCount, VertexFormat vertexFormat, const unsigned int* index, size_t indexCount )
 {
@@ -975,6 +999,35 @@ MeshId RenderManager::CreateQuad( const uvec2& size, bool generateUV, bool gener
   return meshId;
 }
 
+MultiMeshId RenderManager::AddMultiMesh( const char* path )
+{
+  const struct aiScene* scene = NULL;
+  scene = aiImportFile(path,aiProcessPreset_TargetRealtime_MaxQuality);
+  if( !scene || scene->mNumMeshes <= 0 )
+  {
+    DODO_LOG("Error loading mesh %s", path );
+    return INVALID_ID;
+  }
+  u32 submeshCount = scene->mNumMeshes;
+
+
+  MultiMesh newMesh;
+  for( u32 i(0); i<submeshCount; ++i )
+  {
+    newMesh.AddSubMesh( AddSubMeshFromFile( scene, i, this, path ) );
+
+  }
+
+  MultiMeshId meshId( mMultiMesh->Add( newMesh ) );
+  return meshId;
+}
+
+MultiMesh RenderManager::GetMultiMesh( MultiMeshId meshId )
+{
+  MultiMesh* mesh = mMultiMesh->GetElement(meshId);
+  return *mesh;
+}
+
 Mesh RenderManager::GetMesh( MeshId meshId )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
@@ -1052,6 +1105,18 @@ void RenderManager::DrawMesh( MeshId meshId )
   else
   {
     CHECK_GL_ERROR( glDrawArrays( primitive, 0, mesh->mVertexCount ) );
+  }
+}
+
+void RenderManager::DrawMultiMesh( MultiMeshId id )
+{
+
+  MultiMesh* multiMesh( mMultiMesh->GetElement( id ) );
+  for( u32 i(0); i<multiMesh->mMeshCount; ++i )
+  {
+    SetupMeshVertexFormat( multiMesh->mMesh[i] );
+    DrawMesh( multiMesh->mMesh[i] );
+
   }
 }
 

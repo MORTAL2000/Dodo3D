@@ -17,6 +17,7 @@ typedef u32 VAOId;
 typedef u32 ProgramId;
 typedef u32 FBOId;
 typedef Id MeshId;
+typedef Id MultiMeshId;
 
 
 enum Primitive
@@ -106,6 +107,7 @@ struct RenderManager
 
   void Init();
 
+  //Buffers
   BufferId AddBuffer( size_t size, const void* data = 0 );
   void RemoveBuffer(BufferId buffer);
   void UpdateBuffer(BufferId buffer, size_t size, void* data );
@@ -116,6 +118,7 @@ struct RenderManager
   void BindUniformBuffer( BufferId bufferId, u32 bindingPoint );
   void BindShaderStorageBuffer( BufferId bufferId, u32 bindingPoint );
 
+  //Textures
   TextureId Add2DTexture(const Image& image, bool generateMipmaps = true );
   TextureId Add2DArrayTexture(TextureFormat format, u32 width, u32 height, u32 layers, bool generateMipmaps = true);
   TextureId AddCubeTexture( Image* images, bool generateMipmaps = true );
@@ -127,9 +130,11 @@ struct RenderManager
   void Bind2DArrayTexture( TextureId textureId, u32 textureUnit );
   void BindCubeTexture( TextureId textureId, u32 textureUnit );
 
+  //Programs
   ProgramId AddProgram( const u8** vertexShaderSource, const u8** fragmentShaderSource );
   void RemoveProgram( u32 program );
   void UseProgram( ProgramId programId );
+  ProgramId GetCurrentProgramId();
   s32 GetUniformLocation( ProgramId programId, const char* name );
   void SetUniform( s32 location, f32 value );
   void SetUniform( s32 location, s32 value );
@@ -139,6 +144,7 @@ struct RenderManager
   void SetUniform( s32 location, const vec3& value );
   void SetUniform( s32 location, const mat4& value );
 
+  //FrameBuffers
   FBOId AddFrameBuffer();
   void BindFrameBuffer( FBOId fbo );
   void ClearColorAttachment( u32 index, const vec4& value );
@@ -147,26 +153,32 @@ struct RenderManager
   void Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level = 0 );
   void AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId texture, u32 level = 0 );
 
+  //VAOs
   VAOId AddVAO();
   void RemoveVAO(VAOId vao);
   void BindVAO( VAOId vao);
 
+  //Meshes
   void SetupMeshVertexFormat( MeshId meshId );
   void SetupInstancedAttribute( AttributeType type, const AttributeDescription& description );
-  MeshId AddMesh( const char* path );
+  MeshId AddMesh( const char* path, u32 submesh = 0 );
+  MeshId AddMesh( const Mesh& m );
   MeshId AddMesh( const void* vertexData, size_t vertexCount, VertexFormat vertexFormat, const unsigned int* index, size_t indexCount );
   MeshId CreateQuad( const uvec2& size, bool generateUV, bool generateNormals, const uvec2& subdivision = uvec2(1u,1u) );
   Mesh GetMesh( MeshId meshId );
   void DrawMesh( MeshId meshId );
   void DrawMeshInstanced( MeshId meshId, u32 instanceCount );
+  MultiMeshId AddMultiMesh( const char* path );
+  MultiMesh  GetMultiMesh( MultiMeshId id );
+  void DrawMultiMesh( MultiMeshId id );
 
+  //State
   void SetClearColor(const vec4& color);
   void SetClearDepth(f32 value);
   void ClearBuffers( u32 mask );
   void SetViewport( s32 x, s32 y, size_t width, size_t height );
   void SetBlendingMode(BlendingMode mode);
   void SetBlendingFunction(BlendingFunction sourceColor, BlendingFunction destinationColor, BlendingFunction sourceAlpha, BlendingFunction destinationAlpha );
-
   void SetCullFace( CullFace cullFace );
   void SetDepthTest( DepthTestFunction function );
   void DisableDepthWrite();
@@ -175,21 +187,20 @@ struct RenderManager
 
   void PrintInfo();
 
-  std::vector<VAOId>	mVAO;
+private:
 
+  std::vector<VAOId>  mVAO;
   std::vector<BufferId>    mBuffer;
   std::vector<size_t> mBufferSize;
-
   std::vector<TextureId>  mTexture;
   std::vector<vec3> mTextureSize;
-
   std::vector<ProgramId>  mProgram;
-
   std::vector<FBOId>  mFrameBuffer;
   std::vector<vec3> mFrameBufferSize;
-
   ComponentList<Mesh>* mMesh;
+  ComponentList<MultiMesh>* mMultiMesh;
 
+  s32   mCurrentProgram;
   s32   mCurrentVertexBuffer;
   s32   mCurrentIndexBuffer;
   s32   mCurrentVAO;

@@ -4,6 +4,8 @@
 #include <types.h>
 #include <maths.h>
 #include <log.h>
+#include <vector>
+#include <id.h>
 
 namespace Dodo
 {
@@ -67,7 +69,6 @@ private:
   size_t                mVertexSize;                        //Size in bytes
 };
 
-
 struct Mesh
 {
 public:
@@ -83,8 +84,18 @@ public:
   size_t        mIndexCount;
   VertexFormat  mVertexFormat;
   u32           mPrimitive;
+};
 
 
+struct MultiMesh
+{
+  MultiMesh();
+  void AddSubMesh( Id meshId );
+  MultiMesh(u32 meshCount);
+  ~MultiMesh();
+
+  std::vector<Id> mMesh;
+  u32 mMeshCount;
 };
 
 }
