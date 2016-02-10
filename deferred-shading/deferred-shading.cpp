@@ -284,7 +284,7 @@ public:
   {
     //Animate lights
     AnimateLights( GetTimeDelta() );
-
+    mRenderManager.SetCullFace( CULL_BACK );
     //Build GBuffer
     mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
     mRenderManager.BindFrameBuffer( mFbo );
@@ -305,6 +305,7 @@ public:
     }
 
     //Draw light volumes to illuminate
+    mRenderManager.SetCullFace( CULL_FRONT );
     mRenderManager.SetBlendingMode(BLEND_ADD);
     mRenderManager.SetBlendingFunction( BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE );
     mRenderManager.SetDepthTest( DEPTH_TEST_ALWAYS );
@@ -332,6 +333,7 @@ public:
     }
 
     //Draw lights
+    mRenderManager.SetCullFace( CULL_BACK );
     mRenderManager.SetBlendingMode(BLEND_DISABLED);
     mRenderManager.UseProgram( mColorShader );
     mRenderManager.BindUniformBuffer( mMatrixBuffer, 0 );

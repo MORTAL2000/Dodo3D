@@ -390,7 +390,7 @@ RenderManager::RenderManager()
 ,mCurrentVAO(-1)
 ,mCurrentFBO(0)
 ,mIsDepthTestEnabled(false)
-,mIsCullFaceEnabled(true)
+,mIsCullFaceEnabled(false)
 ,mIsBlendingEnabled(false)
 {}
 
