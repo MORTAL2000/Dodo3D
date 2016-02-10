@@ -221,7 +221,7 @@ public:
     mSkyboxShader = mRenderManager.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
 
     //Load meshes
-    mMesh = mRenderManager.AddMesh( "data/R2D2.dae" );
+    mMesh = mRenderManager.AddMeshFromFile( "data/R2D2.dae" );
     Mesh mesh = mRenderManager.GetMesh(mMesh);
 
     mTxId0 = mTxManager.CreateTransform();

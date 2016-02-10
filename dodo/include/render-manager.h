@@ -7,6 +7,7 @@
 #include <maths.h>
 #include <mesh.h>
 #include <image.h>
+#include <material.h>
 
 namespace Dodo
 {
@@ -161,9 +162,13 @@ struct RenderManager
   //Meshes
   void SetupMeshVertexFormat( MeshId meshId );
   void SetupInstancedAttribute( AttributeType type, const AttributeDescription& description );
-  MeshId AddMesh( const char* path, u32 submesh = 0 );
+  MeshId AddMeshFromFile( const char* path, u32 submesh = 0 );
+  u32 GetMeshCountFromFile( const char* path );
+  void AddMultipleMeshesFromFile( const char* path, MeshId* meshId, Material* materials, u32 count );
+
   MeshId AddMesh( const Mesh& m );
   MeshId AddMesh( const void* vertexData, size_t vertexCount, VertexFormat vertexFormat, const unsigned int* index, size_t indexCount );
+
   MeshId CreateQuad( const uvec2& size, bool generateUV, bool generateNormals, const uvec2& subdivision = uvec2(1u,1u) );
   Mesh GetMesh( MeshId meshId );
   void DrawMesh( MeshId meshId );

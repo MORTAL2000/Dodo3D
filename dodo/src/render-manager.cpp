@@ -218,7 +218,7 @@ GLenum GetGLBlendingFunction( BlendingFunction function )
   }
 }
 
-MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManager* renderManager, const char* path )
+MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManager* renderManager, Material* material = 0)
 {
   Mesh newMesh;
 
@@ -362,6 +362,20 @@ MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManag
     newMesh.mVertexFormat.SetAttribute(VERTEX_ATTRIBUTE_5, AttributeDescription( F32x3, newMesh.mVertexFormat.VertexSize(), vertexSize) );
   }
 
+  //Read material information
+  if( material && scene->HasMaterials() )
+  {
+    u32 materialIndex = mesh->mMaterialIndex;
+    aiMaterial* m = scene->mMaterials[materialIndex];
+
+    aiColor3D color (0.f,0.f,0.f);
+    m->Get(AI_MATKEY_COLOR_DIFFUSE,color);
+
+    material->mDiffuseColor = vec3( color.r, color.g, color.b );
+    m->Get(AI_MATKEY_COLOR_SPECULAR,color);
+    material->mSpecularColor = vec3( color.r, color.g, color.b );
+  }
+
   MeshId meshId( renderManager->AddMesh( newMesh ) );
   return meshId;
 }
@@ -376,7 +390,7 @@ RenderManager::RenderManager()
 ,mCurrentVAO(-1)
 ,mCurrentFBO(0)
 ,mIsDepthTestEnabled(false)
-,mIsCullFaceEnabled(true)
+,mIsCullFaceEnabled(false)
 ,mIsBlendingEnabled(false)
 {}
 
@@ -866,10 +880,8 @@ void RenderManager::BindVAO( VAOId vao)
 }
 
 
-MeshId RenderManager::AddMesh( const char* path, u32 submesh )
+MeshId RenderManager::AddMeshFromFile( const char* path, u32 submesh )
 {
-
-
   //Load mesh
   const struct aiScene* scene = NULL;
   scene = aiImportFile(path,aiProcessPreset_TargetRealtime_MaxQuality);
@@ -880,7 +892,7 @@ MeshId RenderManager::AddMesh( const char* path, u32 submesh )
   }
 
 
-  return AddSubMeshFromFile( scene, 0, this, path );
+  return AddSubMeshFromFile( scene, submesh, this );
 }
 
 MeshId RenderManager::AddMesh( const Mesh& m )
@@ -999,27 +1011,47 @@ MeshId RenderManager::CreateQuad( const uvec2& size, bool generateUV, bool gener
   return meshId;
 }
 
-MultiMeshId RenderManager::AddMultiMesh( const char* path )
+u32 RenderManager::GetMeshCountFromFile( const char* path )
+{
+  u32 result(0);
+  const struct aiScene* scene = NULL;
+  scene = aiImportFile(path,aiProcessPreset_TargetRealtime_MaxQuality);
+  if( !scene || scene->mNumMeshes <= 0 )
+  {
+    DODO_LOG("Error loading mesh %s", path );
+  }
+  else
+  {
+    result = scene->mNumMeshes;
+  }
+
+  return result;
+}
+
+void RenderManager::AddMultipleMeshesFromFile( const char* path, MeshId* meshId, Material* materials, u32 count )
 {
   const struct aiScene* scene = NULL;
   scene = aiImportFile(path,aiProcessPreset_TargetRealtime_MaxQuality);
   if( !scene || scene->mNumMeshes <= 0 )
   {
     DODO_LOG("Error loading mesh %s", path );
-    return INVALID_ID;
+    return;
   }
-  u32 submeshCount = scene->mNumMeshes;
 
-
-  MultiMesh newMesh;
-  for( u32 i(0); i<submeshCount; ++i )
+  if( materials )
   {
-    newMesh.AddSubMesh( AddSubMeshFromFile( scene, i, this, path ) );
-
+    for( u32 i(0); i<count; ++i )
+    {
+      meshId[i] = AddSubMeshFromFile( scene, i, this, &materials[i] );
+    }
   }
-
-  MultiMeshId meshId( mMultiMesh->Add( newMesh ) );
-  return meshId;
+  else
+  {
+    for( u32 i(0); i<count; ++i )
+    {
+      meshId[i] = AddSubMeshFromFile( scene, i, this, 0 );
+    }
+  }
 }
 
 MultiMesh RenderManager::GetMultiMesh( MultiMeshId meshId )

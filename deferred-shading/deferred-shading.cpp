@@ -213,8 +213,8 @@ public:
     mPointLightShader = mRenderManager.AddProgram( (const u8**)gVertexShaderPointLight, (const u8**)gFragmentShaderPointLight );
 
     //Load meshes
-    mMesh = mRenderManager.AddMesh( "data/jeep.ms3d" );
-    mSphere = mRenderManager.AddMesh( "data/sphere.obj" );
+    mMesh = mRenderManager.AddMeshFromFile( "data/jeep.ms3d" );
+    mSphere = mRenderManager.AddMeshFromFile( "data/sphere.obj" );
 
     //Load textures
     mTexture = mRenderManager.Add2DTexture( Image("data/jeep.jpg") );
