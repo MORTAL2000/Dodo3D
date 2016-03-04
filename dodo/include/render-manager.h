@@ -172,6 +172,7 @@ struct RenderManager
   MeshId CreateQuad( const uvec2& size, bool generateUV, bool generateNormals, const uvec2& subdivision = uvec2(1u,1u) );
   Mesh GetMesh( MeshId meshId );
   void DrawMesh( MeshId meshId );
+  void DrawCall( u32 vertexCount );
   void DrawMeshInstanced( MeshId meshId, u32 instanceCount );
   MultiMeshId AddMultiMesh( const char* path );
   MultiMesh  GetMultiMesh( MultiMeshId id );

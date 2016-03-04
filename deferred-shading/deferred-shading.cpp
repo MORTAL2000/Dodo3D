@@ -3,6 +3,7 @@
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
+#include <camera.h>
 
 using namespace Dodo;
 
@@ -128,66 +129,6 @@ const char* gFragmentShaderPointLight[] = {
                                            "  color = attenuation * ( NdotL * vec4(uLightColor,1.0) * texture(uTexture0, uv) + specular*vec4(uLightColor,1.0) );\n"
                                            "}\n"
 };
-
-vec3 CubicInterpolation( const vec3& p0, const vec3& p1, const vec3&  p2, const vec3&  p3, float progress )
-{
-  vec3 a3 = 0.5f*p3 - 1.5f*p2 + 1.5f*p1 - 0.5f*p0;
-  vec3 a2 = p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3;
-  vec3 a1 = 0.5f*(p2-p0);
-
-  return progress*progress*progress*a3 + progress*progress*a2 + progress*a1 + p1;
-}
-
-struct FreeCamera
-{
-  FreeCamera( const vec3& position, const vec2& angle, f32 velocity )
-  :mPosition(position),
-   mAngle(angle),
-   mVelocity(velocity)
-  {
-    UpdateTx();
-  }
-
-  void Move( f32 xAmount, f32 zAmount )
-  {
-    mPosition = mPosition + ( zAmount * mVelocity * mForward ) + ( xAmount * mVelocity * mRight );
-    UpdateTx();
-  }
-
-  void Rotate( f32 angleY, f32 angleZ )
-  {
-    mAngle.x =  mAngle.x - angleY;
-    angleY = mAngle.y - angleZ;
-    if( angleY < M_PI_2 && angleY > -M_PI_2 )
-    {
-      mAngle.y = angleY;
-    }
-
-    UpdateTx();
-  }
-
-  void UpdateTx()
-  {
-    quat orientation =  QuaternionFromAxisAngle( vec3(0.0f,1.0f,0.0f), mAngle.x ) *
-        QuaternionFromAxisAngle( vec3(1.0f,0.0f,0.0f), mAngle.y );
-
-    mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
-    mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
-
-    tx = ComputeTransform( mPosition, VEC3_ONE, orientation );
-    ComputeInverse( tx, txInverse );
-  }
-
-  mat4 tx;
-  mat4 txInverse;
-
-  vec3 mPosition;
-  vec3 mForward;
-  vec3 mRight;
-  vec2 mAngle;
-  f32  mVelocity; //Units per second
-};
-
 }
 
 class App : public Application
@@ -378,7 +319,7 @@ public:
   {
     mRenderManager.SetViewport( 0, 0, width, height );
 
-    mProjection = ComputeProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
+    mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
     ComputeInverse( mProjection, mProjectionInverse );
     UpdateMatrixBuffer();
 
@@ -403,28 +344,28 @@ public:
         case KEY_UP:
         case 'w':
         {
-          mCamera.Move( 0.0f, -GetTimeDelta()*0.001f);
+          mCamera.Move( 0.0f, -0.01f);
           UpdateMatrixBuffer();
           break;
         }
         case KEY_DOWN:
         case 's':
         {
-          mCamera.Move( 0.0f, GetTimeDelta()*0.001f );
+          mCamera.Move( 0.0f, 0.01f );
           UpdateMatrixBuffer();
           break;
         }
         case KEY_LEFT:
         case 'a':
         {
-          mCamera.Move( GetTimeDelta()*0.001f, 0.0f );
+          mCamera.Move( 0.01f, 0.0f );
           UpdateMatrixBuffer();
           break;
         }
         case KEY_RIGHT:
         case 'd':
         {
-          mCamera.Move( -GetTimeDelta()*0.001f, 0.0f );
+          mCamera.Move( -0.01f, 0.0f );
           UpdateMatrixBuffer();
           break;
         }
@@ -446,9 +387,9 @@ public:
     if( mMouseButtonPressed )
     {
       f32 angleY = (x - mMousePosition.x) * 0.01f;
-      f32 angleZ = (y - mMousePosition.y) * 0.01f;
+      f32 angleX = (y - mMousePosition.y) * 0.01f;
 
-      mCamera.Rotate( angleY, angleZ );
+      mCamera.Rotate( angleX, angleY );
 
       mMousePosition.x = x;
       mMousePosition.y = y;

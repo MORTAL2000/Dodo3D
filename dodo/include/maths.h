@@ -85,10 +85,10 @@ struct Vector<T,3>
 
   void Normalize()
   {
-    T d = T(1.0) / (T)(x*x+y*y+z*z);
-    x *= d;
-    y *= d;
-    z *= d;
+    f32 inverseLenght = 1.0f / Lenght(*this);
+    x *= inverseLenght;
+    y *= inverseLenght;
+    z *= inverseLenght;
   }
 
   union
@@ -113,11 +113,11 @@ struct Vector<T,4>
 
   void Normalize()
   {
-    T d = T(1.0) / (T)(x*x+y*y+z*z+w*w);
-    x *= d;
-    y *= d;
-    z *= d;
-    w *= d;
+    f32 inverseLenght = 1.0f / Lenght(*this);
+    x *= inverseLenght;
+    y *= inverseLenght;
+    z *= inverseLenght;
+    w *= inverseLenght;
   }
 
   union
@@ -260,6 +260,16 @@ Vector<T,N> Normalize( const Vector<T,N>& v )
   return result;
 }
 
+template <typename T, unsigned int N>
+Vector<T,N> CubicInterpolation( const Vector<T,N>& p0, const Vector<T,N>& p1, const Vector<T,N>&  p2, const Vector<T,N>&  p3, float progress )
+{
+  Vector<T,N> a3 = 0.5f*p3 - 1.5f*p2 + 1.5f*p1 - 0.5f*p0;
+  Vector<T,N> a2 = p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3;
+  Vector<T,N> a1 = 0.5f*(p2-p0);
+
+  return progress*progress*progress*a3 + progress*progress*a2 + progress*a1 + p1;
+}
+
 //Print
 template <typename T, u32 N>
 std::ostream& operator<<(std::ostream& o, const Vector<T,N>& v)
@@ -320,6 +330,7 @@ struct Quaternion
       Normalize();
     }
   }
+
   Quaternion( const Vector<T,3>& axis, T angle )
   {
     Vector<T,3> axisNormalized = axis;
@@ -742,7 +753,7 @@ bool ComputeInverse( const Matrix<T,4,4>& m, Matrix<T,4,4>& result )
 }
 
 template <typename T>
-Matrix<T,4,4> ComputeProjectionMatrix( T fov, T aspect, T near, T far )
+Matrix<T,4,4> ComputePerspectiveProjectionMatrix( T fov, T aspect, T near, T far )
 {
   Matrix<T,4,4> result;
 
@@ -755,6 +766,40 @@ Matrix<T,4,4> ComputeProjectionMatrix( T fov, T aspect, T near, T far )
   result[11] = -1.0f;
   result[14] = (-2.0f*far*near) / (far-near);
 
+
+  return result;
+}
+
+
+template <typename T>
+Matrix<T,4,4> ComputeOrthographicProjectionMatrix( T left, T right, T bottom, T top, T near, T far )
+{
+  Matrix<T,4,4> result;
+
+  T deltaX = right - left;
+  T deltaY = top - bottom;
+  T deltaZ = far - near;
+
+
+  result[0] = 2.0f / deltaX;
+  result[1] = 0.0f;
+  result[2] = 0.0f;
+  result[3] = 0.0f;
+
+  result[4] = 0.0f;
+  result[5] = 2.0f / deltaY;
+  result[6] = 0.0f;
+  result[7] = 0.0f;
+
+  result[8] = 0.0f;
+  result[9] = 0.0f;
+  result[10] = -2.0f / deltaZ;
+  result[11] = 0.0f;
+
+  result[12] = -(right + left) / deltaX;
+  result[13] = -(top + bottom) / deltaY;
+  result[14] = -(far + near)   / deltaZ;
+  result[15] = 1.0f;
 
   return result;
 }

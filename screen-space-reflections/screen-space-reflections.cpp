@@ -7,6 +7,7 @@
 #include <types.h>
 #include <render-manager.h>
 #include <material.h>
+#include <camera.h>
 
 using namespace Dodo;
 
@@ -86,7 +87,7 @@ const char* gFragmentShaderFullscreen[] = {
                                               "int maxStepCount = 200;\n"
                                               "out vec4 color;\n"
 
-                                             "float LinearizeDepth(float depth, float n, float f)\n"
+                                             "float LinearizeDepth(float depth)\n"
                                              "{ \n"
                                              "  return (2 * uCameraNearFar.x) / (uCameraNearFar.y + uCameraNearFar.x - depth * (uCameraNearFar.y - uCameraNearFar.x)); \n"
                                              "}\n"
@@ -109,12 +110,12 @@ const char* gFragmentShaderFullscreen[] = {
                                               "    vec3 reflectionVectorProjectionSpace = (uProjection * vec4(reflectionVectorViewSpace,0.0)).xyz;\n"
                                               "    reflectionVectorProjectionSpace = reflectionVectorProjectionSpace * stepDelta;\n"
                                               "    vec3 positionInRay = vec3(uv + reflectionVectorProjectionSpace.xy*5.0, 0.0);\n"
-                                              "    positionInRay.z = LinearizeDepth(texture2D( uDepthStencilBuffer, positionInRay.xy).r, 0.1, 100);\n"
+                                              "    positionInRay.z = LinearizeDepth(texture2D( uDepthStencilBuffer, positionInRay.xy).r);\n"
                                               "    int sampleCount = 0;\n"
                                               "    while(positionInRay.x <= 1.0 && positionInRay.x >= 0.0 && positionInRay.y <= 1.0 && positionInRay.y >= 0.0 && positionInRay.z <= 1.0 && positionInRay.z >= 0.0 && sampleCount < maxStepCount )\n"
                                               "    {\n"
                                               "      positionInRay = positionInRay + reflectionVectorProjectionSpace;\n"
-                                              "      float sampledDepth = LinearizeDepth(texture2D(uDepthStencilBuffer, positionInRay.xy).z, 0.1, 100);\n"
+                                              "      float sampledDepth = LinearizeDepth(texture2D(uDepthStencilBuffer, positionInRay.xy).z);\n"
                                               "      if(abs(positionInRay.z - sampledDepth) < 0.03)\n"
                                               "      {\n"
                                               "        reflectionColor = texture(uColorBuffer, positionInRay.xy).rgb;\n"
@@ -125,56 +126,6 @@ const char* gFragmentShaderFullscreen[] = {
                                               "    color = texture2D( uColorBuffer, uv ) + vec4(reflectionColor* uSpecularColor,1.0);\n"
                                               "  }\n"
                                               "}\n"
-};
-
-struct FreeCamera
-{
-  FreeCamera( const vec3& position, const vec2& angle, f32 velocity )
-  :mPosition(position),
-   mAngle(angle),
-   mVelocity(velocity)
-  {
-    UpdateTx();
-  }
-
-  void Move( f32 xAmount, f32 zAmount )
-  {
-    mPosition = mPosition + ( zAmount * mVelocity * mForward ) + ( xAmount * mVelocity * mRight );
-    UpdateTx();
-  }
-
-  void Rotate( f32 angleY, f32 angleZ )
-  {
-    mAngle.x =  mAngle.x - angleY;
-    angleY = mAngle.y - angleZ;
-    if( angleY < M_PI_2 && angleY > -M_PI_2 )
-    {
-      mAngle.y = angleY;
-    }
-
-    UpdateTx();
-  }
-
-  void UpdateTx()
-  {
-    quat orientation =  QuaternionFromAxisAngle( vec3(0.0f,1.0f,0.0f), mAngle.x ) *
-        QuaternionFromAxisAngle( vec3(1.0f,0.0f,0.0f), mAngle.y );
-
-    mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
-    mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
-
-    tx = ComputeTransform( mPosition, VEC3_ONE, orientation );
-    ComputeInverse( tx, txInverse );
-  }
-
-  mat4 tx;
-  mat4 txInverse;
-
-  vec3 mPosition;
-  vec3 mForward;
-  vec3 mRight;
-  vec2 mAngle;
-  f32  mVelocity; //Units per second
 };
 
 }
@@ -273,7 +224,7 @@ public:
   void OnResize(size_t width, size_t height )
   {
     mRenderManager.SetViewport( 0, 0, width, height );
-    mProjection = ComputeProjectionMatrix( 1.5f,(f32)width / (f32)height,0.1f,100.0f );
+    mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.1f,100.0f );
     ComputeInverse(mProjection,mProjectionInverse);
 
     //Re-do frame buffer attachments to match new window size
@@ -294,25 +245,25 @@ public:
         case KEY_UP:
         case 'w':
         {
-          mCamera.Move( 0.0f, -GetTimeDelta()*0.001f);
+          mCamera.Move( 0.0f, -0.01f);
           break;
         }
         case KEY_DOWN:
         case 's':
         {
-          mCamera.Move( 0.0f, GetTimeDelta()*0.001f );
+          mCamera.Move( 0.0f, 0.01f );
           break;
         }
         case KEY_LEFT:
         case 'a':
         {
-          mCamera.Move( GetTimeDelta()*0.001f, 0.0f );
+          mCamera.Move( 0.01f, 0.0f );
           break;
         }
         case KEY_RIGHT:
         case 'd':
         {
-          mCamera.Move( -GetTimeDelta()*0.001f, 0.0f );
+          mCamera.Move( -0.01f, 0.0f );
           break;
         }
         default:
@@ -333,9 +284,9 @@ public:
     if( mMouseButtonPressed )
     {
       f32 angleY = (x - mMousePosition.x) * 0.01f;
-      f32 angleZ = (y - mMousePosition.y) * 0.01f;
+      f32 angleX = (y - mMousePosition.y) * 0.01f;
 
-      mCamera.Rotate( angleY, angleZ );
+      mCamera.Rotate( angleX, angleY );
 
       mMousePosition.x = x;
       mMousePosition.y = y;

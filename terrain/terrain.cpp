@@ -6,6 +6,7 @@
 #include <scene-graph.h>
 #include <types.h>
 #include <render-manager.h>
+#include <camera.h>
 
 using namespace Dodo;
 
@@ -87,56 +88,6 @@ const char* gFragmentShaderSkybox[] = {
                                        "}\n"
 };
 
-struct FreeCamera
-{
-  FreeCamera( const vec3& position, const vec2& angle, f32 velocity )
-  :mPosition(position),
-   mAngle(angle),
-   mVelocity(velocity)
-  {
-    UpdateTx();
-  }
-
-  void Move( f32 xAmount, f32 zAmount )
-  {
-    mPosition = mPosition + ( zAmount * mVelocity * mForward ) + ( xAmount * mVelocity * mRight );
-    UpdateTx();
-  }
-
-  void Rotate( f32 angleY, f32 angleZ )
-  {
-    mAngle.x =  mAngle.x - angleY;
-    angleY = mAngle.y - angleZ;
-    if( angleY < M_PI_2 && angleY > -M_PI_2 )
-    {
-      mAngle.y = angleY;
-    }
-
-    UpdateTx();
-  }
-
-  void UpdateTx()
-  {
-    quat orientation =  QuaternionFromAxisAngle( vec3(0.0f,1.0f,0.0f), mAngle.x ) *
-        QuaternionFromAxisAngle( vec3(1.0f,0.0f,0.0f), mAngle.y );
-
-    mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
-    mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
-
-    tx = ComputeTransform( mPosition, VEC3_ONE, orientation );
-    ComputeInverse( tx, txInverse );
-  }
-
-  mat4 tx;
-  mat4 txInverse;
-
-  vec3 mPosition;
-  vec3 mForward;
-  vec3 mRight;
-  vec2 mAngle;
-  f32  mVelocity; //Units per second
-};
-
 struct Vertex
 {
   Dodo::vec3 position;
@@ -158,8 +109,8 @@ struct LightAnimation
 
     f32 t = mCurrentTime / mDuration;
 
-    f32 angle = t * 6.28;
-    Dodo::quat q = Dodo::QuaternionFromAxisAngle( Dodo::vec3(1.0f,0.0f,0.0f), angle );
+    f32 angle = t * 2.0f * M_PI;
+    Dodo::quat q = Dodo::QuaternionFromAxisAngle( Dodo::vec3(0.0f,1.0f,0.0f), angle );
     mLightDirection = Dodo::Rotate( Dodo::vec3(0.0f,0.0f,1.0f), q );
   }
 
@@ -174,7 +125,7 @@ public:
   App()
 :Dodo::Application("Demo",500,500,4,4),
  mTxManager(1),
- mCamera( vec3(0.0f,0.0f,50.0f), vec2(0.0f,0.0f), 1.0f ),
+ mCamera( vec3(0.0f,10.0f,50.0f), vec2(0.0f,0.2f), 1.0f ),
  mElevation(0.0),
  mShader(),
  mGrid(),
@@ -189,7 +140,7 @@ public:
   {
     mTxId0 = mTxManager.CreateTransform(Dodo::vec3(0.0f,0.0f,0.0f), Dodo::vec3(1.0f,1.0f,1.0f), Dodo::QuaternionFromAxisAngle( Dodo::vec3(1.0f,0.0f,0.0f), Dodo::DegreeToRadian(-90.0f)));
     mTxManager.Update();
-    mProjection = Dodo::ComputeProjectionMatrix( Dodo::DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
+    mProjection = Dodo::ComputePerspectiveProjectionMatrix( Dodo::DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
     ComputeSkyBoxTransform();
 
     //Create shaders
@@ -271,7 +222,7 @@ public:
   void OnResize(size_t width, size_t height )
   {
     mRenderManager.SetViewport( 0, 0, width, height );
-    mProjection = Dodo::ComputeProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
+    mProjection = Dodo::ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
   }
 
   void OnKey( Key key, bool pressed )
@@ -328,7 +279,7 @@ public:
       f32 angleY = (x - mMousePosition.x) * 0.01f;
       f32 angleX = (y - mMousePosition.y) * 0.01f;
 
-      mCamera.Rotate( angleY,angleX );
+      mCamera.Rotate( angleX,angleY );
       ComputeSkyBoxTransform();
 
       mMousePosition.x = x;

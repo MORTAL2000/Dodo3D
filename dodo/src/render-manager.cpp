@@ -10,7 +10,7 @@
 #include <assimp/postprocess.h>
 
 #ifdef DEBUG
-#define CHECK_GL_ERROR(a) (a); CheckGlError(#a)
+#define CHECK_GL_ERROR(a) (a); CheckGlError(#a);
 #define PRINT_GLSL_COMPILER_LOG(a) PrintGLSLCompilerLog(a)
 #else
 #define CHECK_GL_ERROR(a) (a)
@@ -60,6 +60,7 @@ void CheckGlError( const char* operation )
   if( error != GL_NO_ERROR )
   {
     std::cout<<"OpenGL error "<<GLErrorToString(error)<<" after "<<operation<<std::endl;
+    assert(0);
   }
 }
 
@@ -699,15 +700,21 @@ ProgramId RenderManager::AddProgram( const u8** vertexShaderSource, const u8** f
 {
   //Compile vertex shader
   GLuint vertexShader = CHECK_GL_ERROR( glCreateShader( GL_VERTEX_SHADER ));
-  CHECK_GL_ERROR( glShaderSource( vertexShader, 1, (const GLchar**)vertexShaderSource, NULL ) );
-  CHECK_GL_ERROR( glCompileShader( vertexShader ) );
-  PRINT_GLSL_COMPILER_LOG( vertexShader );
+  if( vertexShaderSource )
+  {
+    CHECK_GL_ERROR( glShaderSource( vertexShader, 1, (const GLchar**)vertexShaderSource, NULL ) );
+    CHECK_GL_ERROR( glCompileShader( vertexShader ) );
+    PRINT_GLSL_COMPILER_LOG( vertexShader );
+  }
 
   //Compile fragment shader
   GLuint fragmentShader = CHECK_GL_ERROR( glCreateShader( GL_FRAGMENT_SHADER ) );
-  CHECK_GL_ERROR( glShaderSource( fragmentShader, 1, (const GLchar**)fragmentShaderSource, NULL ) );
-  CHECK_GL_ERROR( glCompileShader( fragmentShader ) );
-  PRINT_GLSL_COMPILER_LOG( fragmentShader );
+  if( fragmentShaderSource )
+  {
+    CHECK_GL_ERROR( glShaderSource( fragmentShader, 1, (const GLchar**)fragmentShaderSource, NULL ) );
+    CHECK_GL_ERROR( glCompileShader( fragmentShader ) );
+    PRINT_GLSL_COMPILER_LOG( fragmentShader );
+  }
 
   //Link vertex and fragment shader together
   ProgramId program = CHECK_GL_ERROR( glCreateProgram() );
@@ -822,14 +829,21 @@ void RenderManager::BindFrameBuffer( FBOId fbo )
 
 void RenderManager::SetDrawBuffers( u32 n, u32* buffers )
 {
-  GLenum* buffer = new GLenum[n];
-  for( u32 i(0); i<n; ++i )
+  if( n == 0u )
   {
-    buffer[i] = GL_COLOR_ATTACHMENT0 + buffers[i];
+    CHECK_GL_ERROR( glDrawBuffers( 0, GL_NONE ) );
   }
+  else
+  {
+    GLenum* buffer = new GLenum[n];
+    for( u32 i(0); i<n; ++i )
+    {
+      buffer[i] = GL_COLOR_ATTACHMENT0 + buffers[i];
+    }
 
-  CHECK_GL_ERROR( glDrawBuffers( n, buffer ) );
-  delete[] buffer;
+    CHECK_GL_ERROR( glDrawBuffers( n, buffer ) );
+    delete[] buffer;
+  }
 }
 
 void RenderManager::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level )
@@ -1138,6 +1152,11 @@ void RenderManager::DrawMesh( MeshId meshId )
   {
     CHECK_GL_ERROR( glDrawArrays( primitive, 0, mesh->mVertexCount ) );
   }
+}
+
+void RenderManager::DrawCall( u32 vertexCount )
+{
+  CHECK_GL_ERROR( glDrawArrays( GL_TRIANGLES, 0, vertexCount ) );
 }
 
 void RenderManager::DrawMultiMesh( MultiMeshId id )

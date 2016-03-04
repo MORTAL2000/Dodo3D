@@ -6,6 +6,7 @@
 #include <scene-graph.h>
 #include <types.h>
 #include <render-manager.h>
+#include <camera.h>
 
 using namespace Dodo;
 
@@ -129,60 +130,6 @@ const char* gFragmentShaderSkybox[] = {
                                        "}\n"
 };
 
-struct OrbitingCamera
-{
-  OrbitingCamera( const f32 offset, const vec2& angle, f32 velocity )
-  :mOffset(offset),
-   mAngle(angle),
-   mVelocity(velocity)
-  {
-    UpdateTx();
-  }
-
-  void Move( f32 amount )
-  {
-    mOffset += amount;
-    if( mOffset < 0.0f )
-    {
-      mOffset = 0.0f;
-    }
-
-    UpdateTx();
-  }
-
-  void Rotate( f32 angleY, f32 angleZ )
-  {
-    mAngle.x =  mAngle.x - angleY;
-    angleY = mAngle.y - angleZ;
-    if( angleY < M_PI_2 && angleY > -M_PI_2 )
-    {
-      mAngle.y = angleY;
-    }
-
-    UpdateTx();
-  }
-
-  void UpdateTx()
-  {
-    quat orientation =  QuaternionFromAxisAngle( vec3(0.0f,1.0f,0.0f), mAngle.x ) *
-        QuaternionFromAxisAngle( vec3(1.0f,0.0f,0.0f), mAngle.y );
-
-    mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
-    mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
-    tx = ComputeTransform(vec3(0.0f,0.0f,mOffset), VEC3_ONE, QUAT_UNIT) * ComputeTransform( VEC3_ZERO, VEC3_ONE, orientation );
-
-    ComputeInverse( tx, txInverse );
-  }
-
-  mat4 tx;
-  mat4 txInverse;
-
-  f32 mOffset;
-  vec3 mForward;
-  vec3 mRight;
-  vec2 mAngle;
-  f32  mVelocity; //Units per second
-};
 
 }
 
@@ -202,8 +149,7 @@ public:
 
   void Init()
   {
-
-    mProjection = ComputeProjectionMatrix( DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
+    mProjection = ComputePerspectiveProjectionMatrix( DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
     ComputeSkyBoxTransform();
 
     //Create a texture
@@ -296,7 +242,7 @@ public:
   void OnResize(size_t width, size_t height )
   {
     mRenderManager.SetViewport( 0, 0, width, height );
-    mProjection = ComputeProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
+    mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
     ComputeInverse( mProjection, mProjectionI );
     //Recreate framebuffer attachments to match new size
     mRenderManager.RemoveTexture(mColorAttachment);
