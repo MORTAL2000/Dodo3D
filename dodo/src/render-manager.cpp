@@ -793,6 +793,11 @@ void RenderManager::SetUniform( s32 location, const vec3& value )
   CHECK_GL_ERROR( glUniform3fv( location, 1, value.data ) );
 }
 
+void RenderManager::SetUniform( s32 location, vec3* value, u32 count )
+{
+  CHECK_GL_ERROR( glUniform3fv( location, count, value->data )  );
+}
+
 void RenderManager::SetUniform( s32 location, const mat4& value )
 {
   CHECK_GL_ERROR( glUniformMatrix4fv( location, 1, GL_FALSE, value.data ) );

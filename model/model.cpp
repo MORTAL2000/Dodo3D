@@ -24,8 +24,26 @@ const char* gVertexShaderSourceDiffuse[] = {
                                             "out vec3 lightDirection_tangentspace;\n"
                                             "out vec3 viewVector_tangentspace;\n"
                                             "out vec2 uv;\n"
+                                            "out vec3 shDiffuse;\n"
                                             "uniform mat4 uModelView;\n"
                                             "uniform mat4 uModelViewProjection;\n"
+                                            "uniform mat4 uModel;\n"
+                                            "uniform vec3 shCoeff[9];\n"
+
+                                            "vec3 ApplySHLights( vec3 normal )\n"
+                                            "{\n"
+                                            "  vec3 colour = shCoeff[0];\n"
+                                            "  colour += shCoeff[1] * normal.x;\n"
+                                            "  colour += shCoeff[2] * normal.y;\n"
+                                            "  colour += shCoeff[3] * normal.z;\n"
+                                            "  colour += shCoeff[4] * (normal.x * normal.z);\n"
+                                            "  colour += shCoeff[5] * (normal.z * normal.y);\n"
+                                            "  colour += shCoeff[6] * (normal.y * normal.x);\n"
+                                            "  colour += shCoeff[7] * (3.0f * normal.z * normal.z - 1.0f);\n"
+                                            "  colour += shCoeff[8] * (normal.x * normal.x - normal.y * normal.y);\n"
+                                            "  return colour;\n"
+                                            "}\n"
+
                                             "void main(void)\n"
                                             "{\n"
                                             "  gl_Position = uModelViewProjection * vec4(aPosition,1.0);\n"
@@ -40,6 +58,8 @@ const char* gVertexShaderSourceDiffuse[] = {
                                             "  lightDirection_tangentspace = normalize( TBN * lightDirection_cameraspace );\n"
                                             "  viewVector_tangentspace  = normalize( TBN * viewVector);\n"
                                             "  uv = aTexCoord;\n"
+                                            "  vec3 normal_worldspace = normalize( (uModel * vec4(aNormal,0.0)).xyz );\n"
+                                            "  shDiffuse = ApplySHLights( normal_worldspace );\n"
                                             "}\n"
 };
 const char* gFragmentShaderSourceDiffuse[] = {
@@ -50,6 +70,7 @@ const char* gFragmentShaderSourceDiffuse[] = {
                                               "in vec3 lightDirection_tangentspace;\n"
                                               "in vec3 viewVector_tangentspace;\n"
                                               "in vec2 uv;\n"
+                                              "in vec3 shDiffuse;\n"
                                               "out vec3 color;\n"
                                               "void main(void)\n"
                                               "{\n"
@@ -58,7 +79,7 @@ const char* gFragmentShaderSourceDiffuse[] = {
                                               "  float ambient = 0.3;\n"
                                               "  vec3 reflection = normalize( -reflect( viewVector_tangentspace, normal_tagentspace));\n"
                                               " float specular = texture2D( uTexture2, uv ).r * pow(max(dot(reflection,lightDirection_tangentspace),0.0),100.0);\n"
-                                              "  color = (diffuse + ambient) * texture(uTexture0, uv ).rgb + vec3(specular,specular,specular);\n"
+                                              "  color = (diffuse + shDiffuse) * texture(uTexture0, uv ).rgb + vec3(specular,specular,specular);\n"
                                               "}\n"
 };
 
@@ -130,8 +151,31 @@ const char* gFragmentShaderSkybox[] = {
                                        "}\n"
 };
 
+void ProjectLightToSH( vec3* sh, const vec3& lightIntensity, const vec3& lightDirection )
+{
+  static float fConst1 = 4.0/17.0;
+  static float fConst2 = 8.0/17.0;
+  static float fConst3 = 15.0/17.0;
+  static float fConst4 = 5.0/68.0;
+  static float fConst5 = 15.0/68.0;
 
+
+  vec3 direction = lightDirection;
+  direction.Normalize();
+  sh[0] += lightIntensity * fConst1;
+  sh[1] += lightIntensity * fConst2 * direction.x;
+  sh[2] += lightIntensity * fConst2 * direction.y;
+  sh[3] += lightIntensity * fConst2 * direction.z;
+  sh[4] += lightIntensity * fConst3 * (direction.x * direction.z);
+  sh[5] += lightIntensity * fConst3 * (direction.z * direction.y);
+  sh[6] += lightIntensity * fConst3 * (direction.y * direction.x);
+  sh[7] += lightIntensity * fConst4 * (3.0f * direction.z * direction.z - 1.0f);
+  sh[8] += lightIntensity * fConst5 * (direction.x * direction.x - direction.y * direction.y);
 }
+
+} //Unnamed namespace
+
+
 
 class App : public Application
 {
@@ -197,6 +241,13 @@ public:
     cubemapImages[4].LoadFromFile( "data/sky/zpos.png", false);
     cubemapImages[5].LoadFromFile( "data/sky/zneg.png", false);
     mCubeMap = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+
+
+    //Project lights into spherical harmonics
+    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.3f,0.3f,0.4f), vec3(-1.0f,0.0f,0.0f) );
+    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.3f,0.3f,0.4f), vec3(0.0f,0.0f,1.0f) );
+    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.1f,0.1f,0.2f), vec3(0.0f,0.0f,-1.0f) );
+    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.1f,0.1f,0.2f), vec3(-1.0f,0.0f,-1.0f) );
   }
 
   void Render()
@@ -226,6 +277,8 @@ public:
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture2"), 2 );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), modelMatrix * mCamera.txInverse );
+    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModel"), modelMatrix );
+    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics[0], 9 );
     mRenderManager.SetupMeshVertexFormat( mMesh );
     mRenderManager.DrawMesh( mMesh );
 
@@ -318,6 +371,8 @@ private:
   TextureId   mNormalTexture;
   TextureId   mSpecularTexture;
   TextureId   mCubeMap;
+
+  vec3        mSphericalHarmonics[9];
   ProgramId   mShader;
 
   MeshId      mQuad;

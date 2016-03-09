@@ -143,6 +143,7 @@ struct RenderManager
   void SetUniform( s32 location, const vec2& value );
   void SetUniform( s32 location, const uvec2& value );
   void SetUniform( s32 location, const vec3& value );
+  void SetUniform( s32 location, vec3* value, u32 count );
   void SetUniform( s32 location, const mat4& value );
 
   //FrameBuffers

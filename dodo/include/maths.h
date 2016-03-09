@@ -146,6 +146,16 @@ Vector<T,N> operator+( const Vector<T,N>& v0, const Vector<T,N>& v1 )
 }
 
 template <typename T, u32 N>
+Vector<T,N> operator+=( Vector<T,N>& v0, const Vector<T,N>& v1 )
+{
+  for( u32 i(0); i<N; ++i )
+  {
+    v0.data[i] = v0.data[i] + v1.data[i];
+  }
+  return v0;
+}
+
+template <typename T, u32 N>
 Vector<T,N> operator-( const Vector<T,N>& v0, const Vector<T,N>& v1 )
 {
   Vector<T,N> result;
@@ -191,8 +201,20 @@ Vector<T,N> operator*( const T a, const Vector<T,N>& v0 )
   return result;
 }
 
+//Multiplication by a scalar
 template <typename T, u32 N>
-Vector<T,N>& operator*=( const Vector<T,N>& v0,const T a )
+Vector<T,N> operator*( const Vector<T,N>& v0, const T a  )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = v0.data[i] * a;
+  }
+  return result;
+}
+
+template <typename T, u32 N>
+Vector<T,N> operator*=( Vector<T,N>& v0, const T a )
 {
   for( u32 i(0); i<N; ++i )
   {
@@ -388,7 +410,7 @@ Quaternion<T> QuaternionFromAxisAngle( const Vector<T,3>& axis, T angle )
 }
 
 template <typename T>
-Quaternion<T> operator*=( const Quaternion<T>& v0, const Quaternion<T>& v1 )
+Quaternion<T> operator*=( Quaternion<T>& v0, const Quaternion<T>& v1 )
 {
   Quaternion<T> result;
 
@@ -397,6 +419,7 @@ Quaternion<T> operator*=( const Quaternion<T>& v0, const Quaternion<T>& v1 )
   result.z = v0.x * v1.y - v0.y * v1.x + v0.w * v1.z + v0.z * v1.w;
   result.w = v0.w * v1.w - (v0.x*v1.x + v0.y*v1.y + v0.z*v1.z );
 
+  v0 = result;
   return result;
 }
 

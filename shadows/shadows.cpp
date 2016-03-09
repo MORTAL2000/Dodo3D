@@ -237,7 +237,7 @@ public:
    mMeshes(0),
    mMaterials(0),
    mMeshCount(0),
-   mShadowMapSize(2046u,2046u),
+   mShadowMapSize(1024u,1024u),
    mRenderShadowMap(false),
    mEnablePCF(true),
    mShader(),
