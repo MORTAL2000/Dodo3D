@@ -236,7 +236,7 @@ public:
   App()
 :Application("Demo",500,500,4,4),
  mTxManager(1),
- mLightingEnv(0),
+ mLightingEnv(1u),
  mCamera( 2.0f, vec2(0.0f,0.0f), 1.0f ),
  mMousePosition(0.0f,0.0f),
  mMouseButtonPressed(false)
@@ -289,21 +289,21 @@ public:
     //Create cube map
     Image cubemapImages[6];
 
-    cubemapImages[0].LoadFromFile( "data/sky/xpos.png", false);
-    cubemapImages[1].LoadFromFile( "data/sky/xneg.png", false);
-    cubemapImages[2].LoadFromFile( "data/sky/ypos.png", false);
-    cubemapImages[3].LoadFromFile( "data/sky/yneg.png", false);
-    cubemapImages[4].LoadFromFile( "data/sky/zpos.png", false);
-    cubemapImages[5].LoadFromFile( "data/sky/zneg.png", false);
+    cubemapImages[0].LoadFromFile( "data/sky-box0/xpos.png", false);
+    cubemapImages[1].LoadFromFile( "data/sky-box0/xneg.png", false);
+    cubemapImages[2].LoadFromFile( "data/sky-box0/ypos.png", false);
+    cubemapImages[3].LoadFromFile( "data/sky-box0/yneg.png", false);
+    cubemapImages[4].LoadFromFile( "data/sky-box0/zpos.png", false);
+    cubemapImages[5].LoadFromFile( "data/sky-box0/zneg.png", false);
     mCubeMap0 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
     ProjectCubeMapToSH( &mSphericalHarmonics0[0], &cubemapImages[0] );
 
-    cubemapImages[0].LoadFromFile( "data/sky2/posx.jpg", false);
-    cubemapImages[1].LoadFromFile( "data/sky2/negx.jpg", false);
-    cubemapImages[2].LoadFromFile( "data/sky2/posy.jpg", false);
-    cubemapImages[3].LoadFromFile( "data/sky2/negy.jpg", false);
-    cubemapImages[4].LoadFromFile( "data/sky2/posz.jpg", false);
-    cubemapImages[5].LoadFromFile( "data/sky2/negz.jpg", false);
+    cubemapImages[0].LoadFromFile( "data/sky-box1/posx.jpg", false);
+    cubemapImages[1].LoadFromFile( "data/sky-box1/negx.jpg", false);
+    cubemapImages[2].LoadFromFile( "data/sky-box1/posy.jpg", false);
+    cubemapImages[3].LoadFromFile( "data/sky-box1/negy.jpg", false);
+    cubemapImages[4].LoadFromFile( "data/sky-box1/posz.jpg", false);
+    cubemapImages[5].LoadFromFile( "data/sky-box1/negz.jpg", false);
     mCubeMap1 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
     ProjectCubeMapToSH( &mSphericalHarmonics1[0], &cubemapImages[0] );
   }
