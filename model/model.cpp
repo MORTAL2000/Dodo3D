@@ -75,11 +75,11 @@ const char* gFragmentShaderSourceDiffuse[] = {
                                               "void main(void)\n"
                                               "{\n"
                                               "  vec3 normal_tagentspace = normalize(texture2D( uTexture1, uv ).rgb*2.0 - 1.0);\n"
-                                              "  float diffuse = max(0.0,dot( normal_tagentspace,lightDirection_tangentspace ) );\n"
+                                              "  float diffuse = max(0.0,dot( normal_tagentspace,lightDirection_tangentspace ) )  * 0.5;\n"
                                               "  float ambient = 0.3;\n"
                                               "  vec3 reflection = normalize( -reflect( viewVector_tangentspace, normal_tagentspace));\n"
                                               " float specular = texture2D( uTexture2, uv ).r * pow(max(dot(reflection,lightDirection_tangentspace),0.0),100.0);\n"
-                                              "  color = (diffuse + shDiffuse) * texture(uTexture0, uv ).rgb + vec3(specular,specular,specular);\n"
+                                              "  color = (shDiffuse + diffuse) * texture(uTexture0, uv ).rgb + vec3(specular,specular,specular);\n"
                                               "}\n"
 };
 
@@ -151,6 +151,7 @@ const char* gFragmentShaderSkybox[] = {
                                        "}\n"
 };
 
+
 void ProjectLightToSH( vec3* sh, const vec3& lightIntensity, const vec3& lightDirection )
 {
   static float fConst1 = 4.0/17.0;
@@ -159,9 +160,9 @@ void ProjectLightToSH( vec3* sh, const vec3& lightIntensity, const vec3& lightDi
   static float fConst4 = 5.0/68.0;
   static float fConst5 = 15.0/68.0;
 
-
   vec3 direction = lightDirection;
   direction.Normalize();
+
   sh[0] += lightIntensity * fConst1;
   sh[1] += lightIntensity * fConst2 * direction.x;
   sh[2] += lightIntensity * fConst2 * direction.y;
@@ -173,6 +174,58 @@ void ProjectLightToSH( vec3* sh, const vec3& lightIntensity, const vec3& lightDi
   sh[8] += lightIntensity * fConst5 * (direction.x * direction.x - direction.y * direction.y);
 }
 
+void ProjectCubeMapToSH( vec3* sh, Image* cubemapImages )
+{
+  uvec2 imageSize = uvec2( cubemapImages[0].mWidth, cubemapImages[0].mHeight );
+  unsigned int components = cubemapImages[0].mComponents;
+
+  vec3 direction;
+  f32 invWidth = 1.0f / float(imageSize.x);
+  f32 invWidthBy2 = 2.0f / float(imageSize.x);
+  f32 dw = 1.0f / (f32)(imageSize.x * imageSize.y);
+  for( u32 face(0); face<6; ++face )
+  {
+    for( u32 y(0); y<imageSize.x; ++y )
+    {
+      for( u32 x(0); x<imageSize.y; ++x )
+      {
+        if( face == 0 )
+        {
+          direction = vec3( 1.0f,1.0f - ( invWidthBy2 * y + invWidth ), 1.0f - (invWidthBy2 * float(x) + invWidth) );
+        }
+        else if( face == 1 )
+        {
+          direction = vec3( -1.0f, 1.0f - (invWidthBy2 * float(y) + invWidth), -1.0f + (invWidthBy2 * float(x) + invWidth) );
+        }
+        else if( face == 2 )
+        {
+          direction = vec3( -1.0f + (invWidthBy2 * float(x) + invWidth), 1.0f, -1.0f + (invWidthBy2 * float(y) + invWidth) );
+        }
+        else if( face == 3 )
+        {
+          direction = vec3( -1.0f + (invWidthBy2 * float(x) + invWidth), -1.0f, 1.0f - (invWidthBy2 * float(y) + invWidth) );
+        }
+        else if( face == 4 )
+        {
+          direction = vec3( -1.0f + (invWidthBy2 * float(x) + invWidth), 1.0f - (invWidthBy2 * float(y) + invWidth), 1.0f );
+        }
+        else if( face == 5 )
+        {
+          direction = vec3( 1.0f - (invWidthBy2 * float(x) + invWidth), 1.0f - (invWidthBy2 * float(y) + invWidth), -1.0f );
+        }
+
+        u32 pixel = (x + y * imageSize.x) * components;
+        vec3 color = vec3( cubemapImages[face].mData[pixel]/255.0f,
+                                cubemapImages[face].mData[pixel+1]/255.0f,
+                                cubemapImages[face].mData[pixel+2]/255.0f );
+
+        ProjectLightToSH( sh, color*dw, direction );
+      }
+    }
+  }
+}
+
+
 } //Unnamed namespace
 
 
@@ -183,6 +236,7 @@ public:
   App()
 :Application("Demo",500,500,4,4),
  mTxManager(1),
+ mLightingEnv(0),
  mCamera( 2.0f, vec2(0.0f,0.0f), 1.0f ),
  mMousePosition(0.0f,0.0f),
  mMouseButtonPressed(false)
@@ -234,20 +288,24 @@ public:
 
     //Create cube map
     Image cubemapImages[6];
+
     cubemapImages[0].LoadFromFile( "data/sky/xpos.png", false);
     cubemapImages[1].LoadFromFile( "data/sky/xneg.png", false);
     cubemapImages[2].LoadFromFile( "data/sky/ypos.png", false);
     cubemapImages[3].LoadFromFile( "data/sky/yneg.png", false);
     cubemapImages[4].LoadFromFile( "data/sky/zpos.png", false);
     cubemapImages[5].LoadFromFile( "data/sky/zneg.png", false);
-    mCubeMap = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+    mCubeMap0 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+    ProjectCubeMapToSH( &mSphericalHarmonics0[0], &cubemapImages[0] );
 
-
-    //Project lights into spherical harmonics
-    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.3f,0.3f,0.4f), vec3(-1.0f,0.0f,0.0f) );
-    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.3f,0.3f,0.4f), vec3(0.0f,0.0f,1.0f) );
-    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.1f,0.1f,0.2f), vec3(0.0f,0.0f,-1.0f) );
-    ProjectLightToSH( &mSphericalHarmonics[0], vec3(0.1f,0.1f,0.2f), vec3(-1.0f,0.0f,-1.0f) );
+    cubemapImages[0].LoadFromFile( "data/sky2/posx.jpg", false);
+    cubemapImages[1].LoadFromFile( "data/sky2/negx.jpg", false);
+    cubemapImages[2].LoadFromFile( "data/sky2/posy.jpg", false);
+    cubemapImages[3].LoadFromFile( "data/sky2/negy.jpg", false);
+    cubemapImages[4].LoadFromFile( "data/sky2/posz.jpg", false);
+    cubemapImages[5].LoadFromFile( "data/sky2/negz.jpg", false);
+    mCubeMap1 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+    ProjectCubeMapToSH( &mSphericalHarmonics1[0], &cubemapImages[0] );
   }
 
   void Render()
@@ -257,7 +315,15 @@ public:
 
     //Draw skybox
     mRenderManager.UseProgram( mSkyboxShader );
-    mRenderManager.BindCubeTexture( mCubeMap, 0 );
+    if( mLightingEnv == 0 )
+    {
+      mRenderManager.BindCubeTexture( mCubeMap0, 0 );
+    }
+    else
+    {
+      mRenderManager.BindCubeTexture( mCubeMap1, 0 );
+    }
+
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uTexture0"), 0 );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uViewProjectionInverse"), mSkyBoxTransform );
     mRenderManager.DisableDepthWrite();
@@ -278,7 +344,16 @@ public:
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), modelMatrix * mCamera.txInverse );
     mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModel"), modelMatrix );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics[0], 9 );
+
+    if( mLightingEnv == 0 )
+    {
+      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics0[0], 9 );
+    }
+    else
+    {
+      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics1[0], 9 );
+    }
+
     mRenderManager.SetupMeshVertexFormat( mMesh );
     mRenderManager.DrawMesh( mMesh );
 
@@ -333,6 +408,11 @@ public:
           ComputeSkyBoxTransform();
           break;
         }
+        case 'x':
+        {
+          mLightingEnv = ( mLightingEnv + 1 ) % 2;
+          break;
+        }
         default:
           break;
       }
@@ -370,9 +450,12 @@ private:
   TextureId   mColorTexture;
   TextureId   mNormalTexture;
   TextureId   mSpecularTexture;
-  TextureId   mCubeMap;
+  TextureId   mCubeMap0;
+  TextureId   mCubeMap1;
 
-  vec3        mSphericalHarmonics[9];
+  u32         mLightingEnv;
+  vec3        mSphericalHarmonics0[9];
+  vec3        mSphericalHarmonics1[9];
   ProgramId   mShader;
 
   MeshId      mQuad;

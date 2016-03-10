@@ -4,13 +4,14 @@
 #include <cstdlib>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb-image.h"
-
+#include <iostream>
 using namespace Dodo;
 
 Image::Image()
 :mWidth(0),
  mHeight(0),
  mDepth(0),
+ mComponents(0),
  mFormat(FORMAT_INVALID),
  mData(0)
 {
@@ -25,9 +26,12 @@ Image::Image( s32 width, s32 height, s32 depth, TextureFormat format, u8* data )
 {
   if( data )
   {
-    size_t size( TextureFomatSize(format)* width * height );
+    mComponents = TextureFormatComponents(format);
+    size_t size( TextureFormatSize(format)* width * height );
     mData = (u8*)malloc(size);
     memcpy( mData, data, size);
+
+    std::cout<<"Image size"<<size<<std::endl;
   }
 }
 
@@ -35,6 +39,7 @@ Image::Image( const char* path, bool flipY )
 :mWidth(0),
  mHeight(0),
  mDepth(0),
+ mComponents(0),
  mFormat(FORMAT_INVALID),
  mData(0)
 {
@@ -56,6 +61,8 @@ bool Image::LoadFromFile( const char* path, bool flipY )
   mFormat = FORMAT_INVALID;
   if( mData )
   {
+    mComponents = channelCount;
+
     switch( channelCount )
     {
       case 1:
@@ -73,7 +80,6 @@ bool Image::LoadFromFile( const char* path, bool flipY )
       default:
         break;
     }
-
     return true;
   }
   else
@@ -81,6 +87,8 @@ bool Image::LoadFromFile( const char* path, bool flipY )
     DODO_LOG("Failed to load image %s", path );
     return false;
   }
+
+
 }
 
 Image::~Image()

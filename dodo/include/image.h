@@ -20,7 +20,7 @@ enum TextureFormat
   FORMAT_GL_DEPTH_STENCIL
 };
 
-inline u8 TextureFomatSize( TextureFormat t )
+inline u8 TextureFormatSize( TextureFormat t )
 {
   switch( t )
   {
@@ -45,7 +45,28 @@ inline u8 TextureFomatSize( TextureFormat t )
     default:
       return 0;
   }
+}
 
+inline u8 TextureFormatComponents( TextureFormat t )
+{
+  switch( t )
+  {
+    case FORMAT_R8:
+    case FORMAT_GL_DEPTH:
+      return 1;
+    case FORMAT_GL_DEPTH_STENCIL:
+      return 2;
+    case FORMAT_RGB8:
+    case FORMAT_RGBA8:
+    case FORMAT_RGB16F:
+    case FORMAT_RGB32F:
+      return 3;
+    case FORMAT_RGBA16F:
+    case FORMAT_RGBA32F:
+      return 4;
+    default:
+      return 0;
+  }
 }
 
 struct Image
@@ -61,6 +82,7 @@ struct Image
   s32             mWidth;
   s32             mHeight;
   s32             mDepth;
+  u8              mComponents;
   TextureFormat   mFormat;
   u8*             mData;
 };
