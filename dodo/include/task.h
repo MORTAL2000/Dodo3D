@@ -29,6 +29,7 @@ public:
   ~ThreadPool();
   void AddTask( ITask* task );
   ITask* GetNextTask();
+  void EndTask(ITask* task );
 
   void Exit();
 
@@ -50,8 +51,7 @@ private:
   std::vector<ITask*>         mTask;          //list of tasks
   pthread_mutex_t             mLock;
   pthread_cond_t              mCondition;
-  pthread_cond_t              mCondition2;
-  size_t                      mWaitingThreads;
+  volatile int                mPendingTasks;
   bool                        mExit;
 };
 

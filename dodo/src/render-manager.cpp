@@ -10,7 +10,7 @@
 #include <assimp/postprocess.h>
 
 #ifdef DEBUG
-#define CHECK_GL_ERROR(a) (a); CheckGlError(#a);
+#define CHECK_GL_ERROR(a) (a); CheckGlError(#a, __LINE__ );
 #define PRINT_GLSL_COMPILER_LOG(a) PrintGLSLCompilerLog(a)
 #else
 #define CHECK_GL_ERROR(a) (a)
@@ -54,12 +54,12 @@ const char* GLErrorToString( GLenum error )
   return "Unknown OpenGL error";
 }
 
-void CheckGlError( const char* operation )
+void CheckGlError( const char* operation, int line )
 {
   GLint error = glGetError();
   if( error != GL_NO_ERROR )
   {
-    std::cout<<"OpenGL error "<<GLErrorToString(error)<<" after "<<operation<<std::endl;
+    std::cout<<"OpenGL error "<<GLErrorToString(error)<<" after "<<operation<<" in line:"<<line<<std::endl;
     assert(0);
   }
 }
@@ -148,6 +148,13 @@ bool GetTextureGLFormat( TextureFormat format, GLenum& dataFormat, GLenum& inter
     {
       dataFormat = GL_LUMINANCE;
       internalFormat = GL_LUMINANCE8;
+      break;
+    }
+    case Dodo::FORMAT_RGB32F:
+    {
+      dataFormat = GL_RGB;
+      internalFormat = GL_RGB32F;
+      dataType = GL_FLOAT;
       break;
     }
     case Dodo::FORMAT_RGBA32F:
@@ -384,7 +391,6 @@ MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManag
 } //unnamed namespace
 RenderManager::RenderManager()
 :mMesh(0)
-,mMultiMesh(0)
 ,mCurrentProgram(-1)
 ,mCurrentVertexBuffer(-1)
 ,mCurrentIndexBuffer(-1)
@@ -402,8 +408,6 @@ void RenderManager::Init()
   glewInit();
 
   mMesh = new ComponentList<Mesh>(MAX_MESH_COUNT);
-  mMultiMesh = new ComponentList<MultiMesh>(MAX_MESH_COUNT);
-
 
   //Bind a VAO
   BindVAO( AddVAO() );
@@ -560,7 +564,42 @@ TextureId RenderManager::Add2DTexture(const Image& image, bool generateMipmaps)
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
   mTexture.push_back(texture);
-  mTextureSize.push_back( vec3( image.mWidth, image.mHeight, 0.0f ));
+  mTextureSize.push_back( uvec3( image.mWidth, image.mHeight, 0u ));
+
+  return texture;
+}
+
+TextureId RenderManager::Add2DTexture(u32 width, u32 height, TextureFormat textureFormat, bool generateMipmaps)
+{
+  TextureId texture = 0;
+
+  GLenum dataFormat,internalFormat,glDataType;
+  if( !GetTextureGLFormat( textureFormat, dataFormat, internalFormat, glDataType ) )
+  {
+    DODO_LOG("Error: Unsupported texture format");
+    return texture;
+  }
+
+  CHECK_GL_ERROR( glGenTextures(1, &texture ) );
+  CHECK_GL_ERROR( glBindTexture(GL_TEXTURE_2D, texture) );
+
+  //u32 numberOfMipmaps = 1u;
+  //if(generateMipmaps)
+  //{
+    u32 numberOfMipmaps = floor( log2(width > height ? width : height) ) + 1;
+  //}
+
+  CHECK_GL_ERROR( glTexStorage2D( GL_TEXTURE_2D, numberOfMipmaps, internalFormat, width, height ) );
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+
+  mTexture.push_back(texture);
+  mTextureSize.push_back( uvec3( width, height, 0u ));
 
   return texture;
 }
@@ -591,7 +630,7 @@ TextureId RenderManager::Add2DArrayTexture(TextureFormat format, u32 width, u32 
   }
 
   mTexture.push_back(texture);
-  mTextureSize.push_back( vec3( width, height, layers ));
+  mTextureSize.push_back( uvec3( width, height, layers ));
 
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -649,6 +688,35 @@ void RenderManager::RemoveTexture(TextureId textureId)
 
 void RenderManager::UpdateTexture(TextureId textureId )
 {}
+
+void RenderManager::Update2DTextureFromBuffer(TextureId textureId, u32 width, u32 height, TextureFormat format, BufferId bufferId )
+{
+  GLenum dataFormat,internalFormat,glDataType;
+  if( !GetTextureGLFormat( format, dataFormat, internalFormat, glDataType ) )
+  {
+    DODO_LOG("Error: Unsupported texture format");
+    return;
+  }
+
+  //Bind the buffer to the GL_PIXEL_UNPACK_BUFFER binding point
+  CHECK_GL_ERROR( glBindBuffer( GL_PIXEL_UNPACK_BUFFER, bufferId ) );
+  CHECK_GL_ERROR( glBindTexture(GL_TEXTURE_2D, textureId) );
+
+  if( glDataType == GL_UNSIGNED_BYTE )
+  {
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+  }
+
+  CHECK_GL_ERROR( glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, width, height, dataFormat, glDataType, 0 ) );
+
+  //Unbind buffer
+  CHECK_GL_ERROR( glBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 ) );
+
+  if( glDataType == GL_UNSIGNED_BYTE )
+  {
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+  }
+}
 
 void RenderManager::Update2DArrayTexture( TextureId textureId, u32 layer, const Image& image )
 {
@@ -1073,12 +1141,6 @@ void RenderManager::AddMultipleMeshesFromFile( const char* path, MeshId* meshId,
   }
 }
 
-MultiMesh RenderManager::GetMultiMesh( MultiMeshId meshId )
-{
-  MultiMesh* mesh = mMultiMesh->GetElement(meshId);
-  return *mesh;
-}
-
 Mesh RenderManager::GetMesh( MeshId meshId )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
@@ -1162,18 +1224,6 @@ void RenderManager::DrawMesh( MeshId meshId )
 void RenderManager::DrawCall( u32 vertexCount )
 {
   CHECK_GL_ERROR( glDrawArrays( GL_TRIANGLES, 0, vertexCount ) );
-}
-
-void RenderManager::DrawMultiMesh( MultiMeshId id )
-{
-
-  MultiMesh* multiMesh( mMultiMesh->GetElement( id ) );
-  for( u32 i(0); i<multiMesh->mMeshCount; ++i )
-  {
-    SetupMeshVertexFormat( multiMesh->mMesh[i] );
-    DrawMesh( multiMesh->mMesh[i] );
-
-  }
 }
 
 void RenderManager::DrawMeshInstanced( MeshId meshId, u32 instanceCount )

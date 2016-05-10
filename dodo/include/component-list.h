@@ -55,6 +55,7 @@ struct ComponentList
 
   bool Remove( Id id )
   {
+    //Remove element and move last element to the gap
     size_t index;
     if( mHash->Get( id, &index ) )
     {

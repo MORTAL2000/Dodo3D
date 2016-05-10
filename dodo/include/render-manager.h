@@ -121,10 +121,12 @@ struct RenderManager
 
   //Textures
   TextureId Add2DTexture(const Image& image, bool generateMipmaps = true );
+  TextureId Add2DTexture(u32 width, u32 height, TextureFormat textureFormat, bool generateMipmaps);
   TextureId Add2DArrayTexture(TextureFormat format, u32 width, u32 height, u32 layers, bool generateMipmaps = true);
   TextureId AddCubeTexture( Image* images, bool generateMipmaps = true );
   void RemoveTexture(TextureId textureId);
   void UpdateTexture(TextureId textureId );
+  void Update2DTextureFromBuffer(TextureId textureId, u32 width, u32 height, TextureFormat format, BufferId bufferId );
   void Update2DArrayTexture( TextureId textureId, u32 layer, const Image& image );
   void UpdateCubeTexture( TextureId textureId, CubeTextureSide side, const Image& image );
   void Bind2DTexture( TextureId textureId, u32 textureUnit );
@@ -175,9 +177,6 @@ struct RenderManager
   void DrawMesh( MeshId meshId );
   void DrawCall( u32 vertexCount );
   void DrawMeshInstanced( MeshId meshId, u32 instanceCount );
-  MultiMeshId AddMultiMesh( const char* path );
-  MultiMesh  GetMultiMesh( MultiMeshId id );
-  void DrawMultiMesh( MultiMeshId id );
 
   //State
   void SetClearColor(const vec4& color);
@@ -200,12 +199,11 @@ private:
   std::vector<BufferId>    mBuffer;
   std::vector<size_t> mBufferSize;
   std::vector<TextureId>  mTexture;
-  std::vector<vec3> mTextureSize;
+  std::vector<uvec3> mTextureSize;
   std::vector<ProgramId>  mProgram;
   std::vector<FBOId>  mFrameBuffer;
   std::vector<vec3> mFrameBufferSize;
   ComponentList<Mesh>* mMesh;
-  ComponentList<MultiMesh>* mMultiMesh;
 
   s32   mCurrentProgram;
   s32   mCurrentVertexBuffer;

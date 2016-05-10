@@ -71,9 +71,9 @@ private:
   ComponentList<TxComponent>*  mComponentList;
   std::vector<SOrderItem>   mOrderedComponents; ///< List of components ordered by its level in hierarchy
 
-  TxId*                       mParentId;    ///< Id of the parent of the component
-  mat4*                     mTxLocal;           ///< Local transform of the component
-  mat4*                     mTx;                ///< World transform of the component
+  TxId*                     mParentId;    ///< Id of the parent of the component
+  mat4*                     mTxLocal;     ///< Local transform of the component
+  mat4*                     mTx;          ///< World transform of the component
 
 };
 

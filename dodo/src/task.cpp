@@ -1,5 +1,5 @@
 #include <task.h>
-
+#include <iostream>
 
 using namespace Dodo;
 
@@ -25,15 +25,17 @@ ThreadPool::WorkerThread::~WorkerThread()
 void* ThreadPool::WorkerThread::Run( void* context )
 {
   WorkerThread* workerThread = (WorkerThread*)context;
+  ThreadPool* pool = workerThread->mPool;
+
   while( !workerThread->mExit )
   {
-    ITask* task = workerThread->mPool->GetNextTask();
+    ITask* task = pool->GetNextTask();
     if( task )
     {
       if( task->DependenciesRemaining() )
       {
         //Add the task to the pool as it can not complete while dependencies are missing
-        workerThread->mPool->AddTask( task );
+        pool->AddTask( task );
         continue;
       }
 
@@ -47,7 +49,7 @@ void* ThreadPool::WorkerThread::Run( void* context )
         task->mDependentTask[i]->ClearOneDependency();
       }
 
-      task->mComplete = true;
+      pool->EndTask( task );
     }
   }
 
@@ -58,7 +60,7 @@ void* ThreadPool::WorkerThread::Run( void* context )
  * ThreadPool
  */
 ThreadPool::ThreadPool( unsigned int numThreads )
-:mWaitingThreads(0),
+:mPendingTasks(0),
  mExit(false)
 {
   //Create a mutex
@@ -85,12 +87,10 @@ ITask* ThreadPool::GetNextTask()
 
   while( mTask.empty() && !mExit )
   {
-    mWaitingThreads++;
     pthread_cond_wait(&mCondition, &mLock);
-    mWaitingThreads--;
   }
 
-  if( mExit )
+  if( mExit || mTask.empty() )
   {
     task = 0;
   }
@@ -105,11 +105,18 @@ ITask* ThreadPool::GetNextTask()
   return task;
 }
 
+void ThreadPool::EndTask( ITask* task )
+{
+  task->mComplete = true;
+  __sync_fetch_and_add( &mPendingTasks, -1);
+}
+
 void ThreadPool::AddTask( ITask* task )
 {
   task->mComplete = false;
   pthread_mutex_lock(&mLock);
   mTask.push_back(task);
+  __sync_fetch_and_add( &mPendingTasks, 1);
   pthread_mutex_unlock(&mLock);
   pthread_cond_signal(&mCondition);
 }
@@ -134,9 +141,11 @@ void ThreadPool::Exit()
 
 void ThreadPool::WaitForCompletion()
 {
-  while( mWaitingThreads < mWorkerThread.size() )
-  {}
+  while( mPendingTasks != 0 )
+  {
+  }
 }
+
 /**
  * ITask
  */
@@ -150,21 +159,17 @@ ITask::~ITask()
 
 bool ITask::DependenciesRemaining()
 {
-  return mDependenciesRemaining != 0;
+  return mDependenciesRemaining > 0;
 }
 
 void ITask::DependsOn( ITask* task )
 {
   task->mDependentTask.push_back(this);
-  mDependenciesRemaining++;
+  __sync_fetch_and_add( &mDependenciesRemaining, 1);
 }
 
 void ITask::ClearOneDependency()
 {
-  //@TODO: mDependenciesRemaining can be accesed from multiple threads
-  --mDependenciesRemaining;
+  __sync_fetch_and_add( &mDependenciesRemaining, -1);
 }
-
-
-
 

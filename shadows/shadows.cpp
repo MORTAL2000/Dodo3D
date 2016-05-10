@@ -1,11 +1,6 @@
 
 #include <application.h>
-#include <task.h>
-#include <tx-manager.h>
 #include <maths.h>
-#include <scene-graph.h>
-#include <types.h>
-#include <render-manager.h>
 #include <material.h>
 
 using namespace Dodo;

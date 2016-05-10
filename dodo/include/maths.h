@@ -105,7 +105,7 @@ struct Vector<T,4>
 {
   Vector<T,4>():x(T(0.0)),y(T(0.0)),z(T(0.0)),w(T(0.0)){}
   Vector<T,4>(const T a, const T b, const T c, const T d):x(a),y(b),z(c),w(d){}
-
+  Vector<T,4>(const Vector<T,3>& v, T d ):x(v.x),y(v.y),z(v.z),w(d){}
   ~Vector<T,4>(){}
 
   T& operator[](u32 n){ return data[n]; }
@@ -213,6 +213,30 @@ Vector<T,N> operator*( const Vector<T,N>& v0, const T a  )
   return result;
 }
 
+//Division by a scalar
+template <typename T, u32 N>
+Vector<T,N> operator/( const Vector<T,N>& v0, const T a  )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = v0.data[i] / a;
+  }
+  return result;
+}
+
+//Add scalar
+template <typename T, u32 N>
+Vector<T,N> operator+( const Vector<T,N>& v0, const T a )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = v0.data[i] + a;
+  }
+  return result;
+}
+
 template <typename T, u32 N>
 Vector<T,N> operator*=( Vector<T,N>& v0, const T a )
 {
@@ -280,6 +304,13 @@ Vector<T,N> Normalize( const Vector<T,N>& v )
     }
   }
   return result;
+}
+
+//Reflect
+template <typename T, u32 N>
+Vector<T,N> Reflect( const Vector<T,N>& v, const Vector<T,N>& n)
+{
+  return v - 2.0f * Dot(v,n) * n;
 }
 
 template <typename T, unsigned int N>
