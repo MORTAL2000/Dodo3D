@@ -8,9 +8,9 @@ using namespace Dodo;
  * Camera
  */
 RayTracer::Camera::Camera(f32 verticalFov, f32 aperture, f32 focalDistance, u32 imageWidth, u32 imageHeight )
-: mVerticalFov(70.0f),
-  mAperture(0.15f),
-  mFocalDistance(5.0f),
+: mVerticalFov(verticalFov),
+  mAperture(aperture),
+  mFocalDistance(focalDistance),
   mImageWidth( imageWidth ),
   mImageHeight( imageHeight ),
   mPixelWidth( 1.0f / (f32(imageWidth-1)) ),
@@ -43,8 +43,8 @@ void RayTracer::Camera::RotateCamera( f32 angleX, f32 angleY)
 void RayTracer::Camera::GenerateRayWithDOF( u32 pixelX, u32 pixelY, vec3* rayOrigin, vec3* rayDirection )
 {
   //Random point inside the pixel
-  f32 u = ((pixelY + drand48()) * mPixelWidth) - 0.5f;
-  f32 v = ((pixelX + drand48()) * mPixelHeight) - 0.5f;
+  f32 u = ( pixelY + drand48() ) * mPixelWidth - 0.5f;
+  f32 v = ( pixelX + drand48() ) * mPixelHeight - 0.5f;
 
   //Compute intersection with focal plane in world space
   vec4 focalPlaneIntersection = vec4( u * mImagePlaneWidth * mFocalDistance, v * mImagePlaneHeight * mFocalDistance, -mFocalDistance, 1.0f ) * GetTx();

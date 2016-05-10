@@ -47,7 +47,7 @@ public:
    mImageResolution(400,400),
    mTileSize(100,100),
    mRenderer(),
-   mCamera( 70.0f, 0.15f, 5.0f, mImageResolution.x, mImageResolution.y ),
+   mCamera( 70.0f, 0.2f, 5.0f, mImageResolution.x, mImageResolution.y ),
    mScene(),
    mMousePosition(0.0f,0.0f),
    mMouseButtonPressed(false)
