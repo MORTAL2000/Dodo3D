@@ -160,7 +160,7 @@ bool RayTracer::Scene::Material::Sample( const vec3& position, const vec3& norma
   if( v < metalness )
   {
     vec3 reflected = Reflect( rayDirection, normal );
-    newDirection = reflected + roughness*GetRandomPointInUnitSphere();
+    newDirection = Normalize( reflected + roughness*GetRandomPointInUnitSphere() );
     attenuation = albedo;
     return Dot( newDirection, normal ) > 0.0f;
   }

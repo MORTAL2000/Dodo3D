@@ -38,8 +38,8 @@ struct FreeCamera
     quat orientation =  QuaternionFromAxisAngle( vec3(0.0f,1.0f,0.0f), mAngle.x ) *
         QuaternionFromAxisAngle( vec3(1.0f,0.0f,0.0f), mAngle.y );
 
-    mForward = Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation );
-    mRight = Cross( mForward, vec3(0.0f,1.0f,0.0f) );
+    mForward = Normalize( Dodo::Rotate( vec3(0.0f,0.0f,1.0f), orientation ) );
+    mRight = Normalize( Cross( mForward, vec3(0.0f,1.0f,0.0f) ) );
 
     tx = ComputeTransform( mPosition, VEC3_ONE, orientation );
     ComputeInverse( tx, txInverse );

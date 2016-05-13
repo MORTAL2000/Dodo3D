@@ -167,6 +167,28 @@ Vector<T,N> operator-( const Vector<T,N>& v0, const Vector<T,N>& v1 )
 }
 
 template <typename T, u32 N>
+Vector<T,N> operator-( T n, const Vector<T,N>& v1 )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = n - v1.data[i];
+  }
+  return result;
+}
+
+template <typename T, u32 N>
+Vector<T,N> operator+( T n, const Vector<T,N>& v1 )
+{
+  Vector<T,N> result;
+  for( u32 i(0); i<N; ++i )
+  {
+    result.data[i] = n + v1.data[i];
+  }
+  return result;
+}
+
+template <typename T, u32 N>
 Vector<T,N> Negate( const Vector<T,N>& v0 )
 {
   Vector<T,N> result;
@@ -911,4 +933,10 @@ std::ostream& operator<<(std::ostream& o, const Matrix<T,ROWS,COLUMNS>& m)
 typedef Matrix<f32,3, 3> mat3;
 typedef Matrix<f32,4, 4> mat4;
 
+}
+
+template <typename T>
+T Saturate( const T& value )
+{
+  return std::min( std::max(value,T(0.0)), T(1.0) );
 }
