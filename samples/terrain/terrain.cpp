@@ -264,7 +264,6 @@ public:
         {
           factor-=0.1f;
           mRenderManager.SetViewport( mWindowSize.x * (1.0f - factor)/2.0f, mWindowSize.y * (1.0f - factor)/2.0f, mWindowSize.x*factor, mWindowSize.y*factor );
-          std::cout<<factor<<std::endl;
           break;
         }
         case 'x':
