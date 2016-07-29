@@ -213,14 +213,14 @@ RayTracer::Renderer::Renderer()
  mTasks(0),
  mTaskCount(0),
  mImageData(0),
- mAccumulationBuffer(0)
+ mAccumulationBuffer()
 {}
 
 RayTracer::Renderer::~Renderer()
 {
-  delete[] mImageData;
-  delete[] mAccumulationBuffer;
   mPool.Exit();
+
+  delete[] mImageData;
   delete[] mTasks;
 }
 
@@ -233,24 +233,25 @@ void RayTracer::Renderer::Initialize( uvec2 resolution, uvec2 tileSize, Camera* 
 
   u32 bufferSize(resolution.x*resolution.y*3);
   mImageData = new u8[bufferSize];
-  mAccumulationBuffer = new vec3[resolution.x*resolution.y];
+  mAccumulationBuffer.mResolution = resolution;
+  mAccumulationBuffer.mBuffer = new vec3[resolution.x*resolution.y];
 
   //Setup tasks
   u32 horizontalTiles = mResolution.x / tileSize.x;
   u32 verticalTiles = mResolution.y / tileSize.y;
   mTaskCount = horizontalTiles * verticalTiles;
   mTasks = new Tile[mTaskCount];
+	u32 taskIndex = 0;
   for( u32 i(0); i<horizontalTiles; ++i )
   {
     for( u32 j(0); j<verticalTiles; ++j )
     {
-      u32 taskIndex = i*horizontalTiles + j;
-      mTasks[taskIndex].mImageResolution = resolution;
       mTasks[taskIndex].mTileSize = tileSize;
-      mTasks[taskIndex].mTile = uvec2( j*tileSize.x, i*tileSize.y );
+      mTasks[taskIndex].mTileOrigin = uvec2( j*tileSize.x, i*tileSize.y );
       mTasks[taskIndex].mScene = mScene;
       mTasks[taskIndex].mCamera = mCamera;
-      mTasks[taskIndex].mAccumulationBuffer = mAccumulationBuffer;
+      mTasks[taskIndex].mAccumulationBuffer = &mAccumulationBuffer;
+      taskIndex++;
     }
   }
 }
@@ -260,7 +261,7 @@ void RayTracer::Renderer::Render()
   u32 frameCount = mCamera->IncrementFrameCount();
   if( frameCount == 1u )
   {
-    memset( mAccumulationBuffer,0.0f, mResolution.x * mResolution.y*sizeof(vec3));
+    mAccumulationBuffer.Reset();
   }
 
   for( u32 i(0); i<mTaskCount; ++i )
@@ -274,7 +275,7 @@ void RayTracer::Renderer::Render()
   vec3 color;
   for( u32 i(0); i<pixelCount; ++i )
   {
-    color = mAccumulationBuffer[i] * ( 1.0f / frameCount );
+    color = mAccumulationBuffer.mBuffer[i] * ( 1.0f / frameCount );
     mImageData[count++] = u8( 255.0f * sqrtf(color.x) );
     mImageData[count++] = u8( 255.0f * sqrtf(color.y) );
     mImageData[count++] = u8( 255.0f * sqrtf(color.z) );
@@ -286,20 +287,32 @@ u8* RayTracer::Renderer::GetImage()
   return mImageData;
 }
 
+
+void RayTracer::Renderer::AccumulationBuffer::Accumulate( const vec3& color, u32 x, u32 y )
+{
+	mBuffer[x*mResolution.x + y] += color;
+}
+
+void RayTracer::Renderer::AccumulationBuffer:: Reset()
+{
+	memset( mBuffer,0.0f, mResolution.x * mResolution.y*sizeof(vec3));
+}
+
+
 void RayTracer::Renderer::Tile::Run()
 {
   vec3 rayDirection;
   vec3 rayOrigin;
-
-  for( u32 row(mTile.y); row<mTile.y+mTileSize.y; ++row )
+	
+	uvec2 tileBounds = mTileOrigin + mTileSize;
+  for( u32 row(mTileOrigin.y); row<tileBounds.y; ++row )
   {
-    for( u32 column(mTile.x); column<mTile.x+mTileSize.x; ++column )
+    for( u32 column(mTileOrigin.x); column<tileBounds.x; ++column )
     {
+			u32 iterationCount(0);
       mCamera->GenerateRayWithDOF( row, column, &rayOrigin, &rayDirection );
-
-      u32 iteration(0);
-      u32 pixelIndex = row*mImageResolution.x + column;
-      mAccumulationBuffer[pixelIndex] += mScene->GetColor( rayOrigin, rayDirection, 4, iteration );
+			vec3 color = mScene->GetColor( rayOrigin, rayDirection, 4, iterationCount );
+      mAccumulationBuffer->Accumulate( color, row, column );
     }
   }
 }

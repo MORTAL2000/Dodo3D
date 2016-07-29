@@ -101,15 +101,33 @@ public:
   u8* GetImage();
 
 private:
+	
+	struct AccumulationBuffer
+	{
+		AccumulationBuffer()
+		:mBuffer(0),
+		 mResolution(uvec2(0u,0u))
+		{}
+
+		~AccumulationBuffer()
+		{
+			delete[] mBuffer;
+		}
+
+		void Accumulate( const vec3& color, u32 x, u32 y );
+		void Reset();
+		
+		vec3* mBuffer;
+		uvec2 mResolution;		
+	};
 
   struct Tile : public Dodo::ITask
   {
     void Run();
 
-    vec3* mAccumulationBuffer;
-    uvec2 mImageResolution;
-    uvec2 mTileSize;
-    uvec2 mTile;
+    AccumulationBuffer* mAccumulationBuffer;
+		uvec2 mTileOrigin;
+    uvec2 mTileSize;    
     Scene* mScene;
     Camera* mCamera;
   };
@@ -121,7 +139,7 @@ private:
   Tile* mTasks;
   u32 mTaskCount;
   u8* mImageData;
-  vec3* mAccumulationBuffer;
+  AccumulationBuffer mAccumulationBuffer;
 };
 
 }
