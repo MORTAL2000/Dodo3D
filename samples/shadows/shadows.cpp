@@ -1,5 +1,5 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <maths.h>
 #include <material.h>
 
@@ -223,12 +223,12 @@ struct FreeCamera
 
 }
 
-class App : public Application
+class App : public GLApplication
 {
 public:
 
   App()
-  :Application("Demo",500,500,4,4),
+  :GLApplication("Demo",500,500,4,4),
    mMeshes(0),
    mMaterials(0),
    mMeshCount(0),
@@ -255,32 +255,32 @@ public:
     vec3 v = Cross(v0, v1);
     v.Normalize();
 
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
-    mShaderPCF = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffusePCF, (const u8**)gFragmentShaderSourceDiffusePCF);
-    mShaderDepth = mRenderManager.AddProgram((const u8**)gVSDepthPass, 0 );
-    mShaderFullScreen = mRenderManager.AddProgram((const u8**)gVSFullScreen, (const u8**)gFSFullScreen);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mShaderPCF = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffusePCF, (const u8**)gFragmentShaderSourceDiffusePCF);
+    mShaderDepth = mRenderer.AddProgram((const u8**)gVSDepthPass, 0 );
+    mShaderFullScreen = mRenderer.AddProgram((const u8**)gVSFullScreen, (const u8**)gFSFullScreen);
 
     //Load meshes
-    mMeshCount = mRenderManager.GetMeshCountFromFile("../resources/cornell-box.obj");
+    mMeshCount = mRenderer.GetMeshCountFromFile("../resources/cornell-box.obj");
     mMeshes = new MeshId[mMeshCount];
     mMaterials = new Material[mMeshCount];
-    mRenderManager.AddMultipleMeshesFromFile("../resources/cornell-box.obj", mMeshes, mMaterials, mMeshCount );
+    mRenderer.AddMultipleMeshesFromFile("../resources/cornell-box.obj", mMeshes, mMaterials, mMeshCount );
 
     //Create offscreen framebuffer
-    mOffscreenFrameBuffer =  mRenderManager.AddFrameBuffer();
-    mDepthStencilBuffer = mRenderManager.Add2DTexture( Image( mShadowMapSize.x, mShadowMapSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
-    mRenderManager.BindFrameBuffer( mOffscreenFrameBuffer );
-    mRenderManager.SetDrawBuffers( 0, 0 );
+    mOffscreenFrameBuffer =  mRenderer.AddFrameBuffer();
+    mDepthStencilBuffer = mRenderer.Add2DTexture( Image( mShadowMapSize.x, mShadowMapSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
+    mRenderer.BindFrameBuffer( mOffscreenFrameBuffer );
+    mRenderer.SetDrawBuffers( 0, 0 );
 
     //Compute orthographic projection for shadow map generation
     mLightProjectionMatrix = ComputeOrthographicProjectionMatrix( -4.0f, 4.0f, -4.0f, 4.0f, 0.5f, 10.0f );
 
     //Set GL state
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( vec4(0.0f,0.0f,0.0f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( vec4(0.0f,0.0f,0.0f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void AnimateLight( f32 timeDelta )
@@ -318,60 +318,60 @@ public:
     AnimateLight(GetTimeDelta());
 
     //Draw occluders as seen from the light into the depth buffer
-    mRenderManager.SetCullFace( CULL_FRONT );
-    mRenderManager.SetViewport( 0, 0, mShadowMapSize.x, mShadowMapSize.y );
-    mRenderManager.BindFrameBuffer( mOffscreenFrameBuffer );
-    mRenderManager.ClearBuffers( DEPTH_BUFFER );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), mLightViewMatrix * mLightProjectionMatrix );
+    mRenderer.SetCullFace( CULL_FRONT );
+    mRenderer.SetViewport( 0, 0, mShadowMapSize.x, mShadowMapSize.y );
+    mRenderer.BindFrameBuffer( mOffscreenFrameBuffer );
+    mRenderer.ClearBuffers( DEPTH_BUFFER );
+    mRenderer.UseProgram( mShader );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), mLightViewMatrix * mLightProjectionMatrix );
     for( u32 i(0); i<2; ++i )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
-      mRenderManager.SetupMeshVertexFormat( mMeshes[i] );
-      mRenderManager.DrawMesh( mMeshes[i] );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
+      mRenderer.SetupMeshVertexFormat( mMeshes[i] );
+      mRenderer.DrawMesh( mMeshes[i] );
     }
 
-    mRenderManager.BindFrameBuffer( 0 );
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetViewport( 0, 0, mWindowSize.x, mWindowSize.y );
-    mRenderManager.ClearBuffers( COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.BindFrameBuffer( 0 );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetViewport( 0, 0, mWindowSize.x, mWindowSize.y );
+    mRenderer.ClearBuffers( COLOR_BUFFER | DEPTH_BUFFER );
 
     if( mRenderShadowMap )
     {
       //Render the shadow map
-      mRenderManager.UseProgram( mShaderFullScreen );
-      mRenderManager.Bind2DTexture( mDepthStencilBuffer, 0 );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uTexture0"), mDepthStencilBuffer );
-      mRenderManager.DrawCall( 3 );
+      mRenderer.UseProgram( mShaderFullScreen );
+      mRenderer.Bind2DTexture( mDepthStencilBuffer, 0 );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uTexture0"), mDepthStencilBuffer );
+      mRenderer.DrawCall( 3 );
     }
     else
     {
       //Render the scene using the shadow map
       if( mEnablePCF )
       {
-        mRenderManager.UseProgram( mShaderPCF );
+        mRenderer.UseProgram( mShaderPCF );
       }
       else
       {
-        mRenderManager.UseProgram( mShader );
+        mRenderer.UseProgram( mShader );
       }
 
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), mCamera.txInverse * mProjection );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelLightViewProjection"), mLightViewMatrix * mLightProjectionMatrix );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), mCamera.txInverse );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shadowMapSize"), mShadowMapSize );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uLightDirection"), mLightDirection );
-      mRenderManager.Bind2DTexture( mDepthStencilBuffer, 0 );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uShadowMap"), 0 );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), mCamera.txInverse * mProjection );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelLightViewProjection"), mLightViewMatrix * mLightProjectionMatrix );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelView"), mCamera.txInverse );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"shadowMapSize"), mShadowMapSize );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uLightDirection"), mLightDirection );
+      mRenderer.Bind2DTexture( mDepthStencilBuffer, 0 );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uShadowMap"), 0 );
 
       for( u32 i(0); i<mMeshCount; ++i )
       {
-        mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
-        mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
-        mRenderManager.SetupMeshVertexFormat( mMeshes[i] );
-        mRenderManager.DrawMesh( mMeshes[i] );
+        mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
+        mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
+        mRenderer.SetupMeshVertexFormat( mMeshes[i] );
+        mRenderer.DrawMesh( mMeshes[i] );
       }
     }
   }

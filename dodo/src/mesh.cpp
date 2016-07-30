@@ -1,6 +1,6 @@
 
 #include <mesh.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 
 using namespace Dodo;
 

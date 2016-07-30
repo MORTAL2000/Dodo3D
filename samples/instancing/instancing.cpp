@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <cstdlib>
 
 using namespace Dodo;
@@ -43,11 +43,11 @@ u32 gQuadCount = 500.0f;
 }
 
 
-class App : public Dodo::Application
+class App : public Dodo::GLApplication
 {
 public:
   App()
-:Dodo::Application("Demo",500,500,4,4)
+:Dodo::GLApplication("Demo",500,500,4,4)
   {}
 
   ~App()
@@ -57,7 +57,7 @@ public:
 
   void Init()
   {
-    mQuad = mRenderManager.CreateQuad(Dodo::uvec2(2u,2u),true,false );
+    mQuad = mRenderer.CreateQuad(Dodo::uvec2(2u,2u),true,false );
 
     //Instanced attribute
     vec4* instanceColor = new vec4[gQuadCount*gQuadCount];
@@ -65,12 +65,12 @@ public:
     {
       instanceColor[i] = vec4( (rand()%255)/255.0f,(rand()%255)/255.0f,(rand()%255)/255.0f, 1.0f );
     }
-    mInstancedBuffer = mRenderManager.AddBuffer( sizeof(vec4)*gQuadCount*gQuadCount, instanceColor );
+    mInstancedBuffer = mRenderer.AddBuffer( sizeof(vec4)*gQuadCount*gQuadCount, instanceColor );
     delete[] instanceColor;
     mInstancedAttribute = AttributeDescription( Dodo::F32x4, 0, 0, mInstancedBuffer, 1 );
 
-    mProgram = mRenderManager.AddProgram( (const u8**)gVertexShader, (const u8**)gFragmentShader );
-    mRenderManager.UseProgram(mProgram);
+    mProgram = mRenderer.AddProgram( (const u8**)gVertexShader, (const u8**)gFragmentShader );
+    mRenderer.UseProgram(mProgram);
 
     mat4* matrices = new mat4[gQuadCount*gQuadCount];
     f32 x(-1.0f);
@@ -86,43 +86,43 @@ public:
       y += 2.0f/(f32)gQuadCount;
     }
 
-    mShaderStorageBuffer = mRenderManager.AddBuffer( sizeof( mat4 )*gQuadCount*gQuadCount, (void*)matrices );
+    mShaderStorageBuffer = mRenderer.AddBuffer( sizeof( mat4 )*gQuadCount*gQuadCount, (void*)matrices );
     delete[] matrices;
-    mRenderManager.BindShaderStorageBuffer( mShaderStorageBuffer, 0 );
+    mRenderer.BindShaderStorageBuffer( mShaderStorageBuffer, 0 );
 
-    mRenderManager.SetClearColor( Dodo::vec4(1.0f,1.0f,1.0f,1.0f));
-    mRenderManager.SetBlendingMode( BLEND_ADD );
-    mRenderManager.SetBlendingFunction( BLENDING_SOURCE_ALPHA, BLENDING_ONE_MINUS_SOURCE_ALPHA, BLENDING_SOURCE_ALPHA, BLENDING_ONE_MINUS_SOURCE_ALPHA);
+    mRenderer.SetClearColor( Dodo::vec4(1.0f,1.0f,1.0f,1.0f));
+    mRenderer.SetBlendingMode( BLEND_ADD );
+    mRenderer.SetBlendingFunction( BLENDING_SOURCE_ALPHA, BLENDING_ONE_MINUS_SOURCE_ALPHA, BLENDING_SOURCE_ALPHA, BLENDING_ONE_MINUS_SOURCE_ALPHA);
   }
 
 
   void Render()
   {
-    mRenderManager.ClearBuffers( Dodo::COLOR_BUFFER );
-    mRenderManager.SetupMeshVertexFormat(mQuad);
-    mRenderManager.SetupInstancedAttribute( VERTEX_ATTRIBUTE_4, mInstancedAttribute );
-    mRenderManager.DrawMeshInstanced( mQuad, gQuadCount*gQuadCount );
+    mRenderer.ClearBuffers( Dodo::COLOR_BUFFER );
+    mRenderer.SetupMeshVertexFormat(mQuad);
+    mRenderer.SetupInstancedAttribute( VERTEX_ATTRIBUTE_4, mInstancedAttribute );
+    mRenderer.DrawMeshInstanced( mQuad, gQuadCount*gQuadCount );
 
     ++gFrameCount;
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
   }
 
   void OnMouseButton( Dodo::MouseButton button, f32 x, f32 y, bool pressed )
   {
     if( pressed )
     {
-      vec4* instanceColor = (vec4*)mRenderManager.MapBuffer( mInstancedBuffer, Dodo::BUFFER_MAP_WRITE );
+      vec4* instanceColor = (vec4*)mRenderer.MapBuffer( mInstancedBuffer, Dodo::BUFFER_MAP_WRITE );
       if(instanceColor)
       {
         for( u32 i(0); i != gQuadCount*gQuadCount; ++i )
         {
           instanceColor[i] = vec4( (rand()%255)/255.0f,(rand()%255)/255.0f,(rand()%255)/255.0f, 1.0f );
         }
-        mRenderManager.UnmapBuffer();
+        mRenderer.UnmapBuffer();
       }
     }
   }

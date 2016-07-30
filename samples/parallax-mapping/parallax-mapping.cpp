@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <camera.h>
 
 using namespace Dodo;
@@ -63,11 +63,11 @@ const char* gFragmentShaderSourceDiffuse[] = {
 };
 }
 
-class App : public Dodo::Application
+class App : public Dodo::GLApplication
 {
 public:
   App()
-  :Dodo::Application("Demo",500,500,4,4),
+  :Dodo::GLApplication("Demo",500,500,4,4),
    mTxManager(1),
    mScale(0.04f),
    mBias(0.02f),
@@ -88,51 +88,51 @@ public:
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( Dodo::DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
 
     //Load resources
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
     Dodo::Image normalImage("../resources/bric_normal.png");
-    mNormalMap = mRenderManager.Add2DTexture( normalImage,true );
+    mNormalMap = mRenderer.Add2DTexture( normalImage,true );
     Dodo::Image colorImage("../resources/bric_diffuse.png");
-    mColorMap = mRenderManager.Add2DTexture( colorImage,true );
+    mColorMap = mRenderer.Add2DTexture( colorImage,true );
     Dodo::Image heightImage("../resources/bric_height.png");
-    mHeightMap = mRenderManager.Add2DTexture( heightImage,true );
+    mHeightMap = mRenderer.Add2DTexture( heightImage,true );
     Dodo::Image specularImage("../resources/bric_specular.png");
-    mSpecularMap = mRenderManager.Add2DTexture( specularImage,true );
-    mQuad = mRenderManager.CreateQuad(Dodo::uvec2(10u,10u), true, true );
+    mSpecularMap = mRenderer.Add2DTexture( specularImage,true );
+    mQuad = mRenderer.CreateQuad(Dodo::uvec2(10u,10u), true, true );
 
     //Set GL state
-    mRenderManager.SetCullFace( Dodo::CULL_NONE );
-    mRenderManager.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( Dodo::CULL_NONE );
+    mRenderer.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void Render()
   {
-    mRenderManager.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
+    mRenderer.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
 
     //Draw mesh
     Dodo::mat4 modelMatrix;
     mTxManager.GetWorldTransform( mTxId0, &modelMatrix );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"),  modelMatrix * mCamera.txInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uScaleBias"),  Dodo::vec2(mScale,mBias) );
-    mRenderManager.Bind2DTexture( mColorMap, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uColorMap"), 0 );
-    mRenderManager.Bind2DTexture( mNormalMap, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uNormalMap"), 1 );
-    mRenderManager.Bind2DTexture( mHeightMap, 2 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uHeightMap"), 2 );
-    mRenderManager.Bind2DTexture( mSpecularMap, 3 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uSpecularMap"), 3 );
-    mRenderManager.SetupMeshVertexFormat( mQuad );
-    mRenderManager.DrawMesh( mQuad );
+    mRenderer.UseProgram( mShader );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelView"),  modelMatrix * mCamera.txInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uScaleBias"),  Dodo::vec2(mScale,mBias) );
+    mRenderer.Bind2DTexture( mColorMap, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uColorMap"), 0 );
+    mRenderer.Bind2DTexture( mNormalMap, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uNormalMap"), 1 );
+    mRenderer.Bind2DTexture( mHeightMap, 2 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uHeightMap"), 2 );
+    mRenderer.Bind2DTexture( mSpecularMap, 3 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uSpecularMap"), 3 );
+    mRenderer.SetupMeshVertexFormat( mQuad );
+    mRenderer.DrawMesh( mQuad );
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
   }
 

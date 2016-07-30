@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <camera.h>
 
 using namespace Dodo;
@@ -118,11 +118,11 @@ struct LightAnimation
   f32 mCurrentTime;
 };
 
-class App : public Dodo::Application
+class App : public Dodo::GLApplication
 {
 public:
   App()
-:Dodo::Application("Demo",500,500,4,4),
+:Dodo::GLApplication("Demo",500,500,4,4),
  mTxManager(1),
  mCamera( vec3(0.0f,10.0f,50.0f), vec2(0.0f,0.2f), 1.0f ),
  mElevation(0.0),
@@ -143,19 +143,19 @@ public:
     ComputeSkyBoxTransform();
 
     //Create shaders
-    mSkyboxShader = mRenderManager.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mSkyboxShader = mRenderer.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
 
 
     //Load resources
     Dodo::Image image("../resources/terrain-heightmap.bmp");
-    mHeightMap = mRenderManager.Add2DTexture( image,false );
+    mHeightMap = mRenderer.Add2DTexture( image,false );
     mHeightmapSize = Dodo::uvec2(image.mWidth, image.mHeight);
     Dodo::Image colorImage("../resources/terrain-color.jpg");
-    mColorMap = mRenderManager.Add2DTexture( colorImage,true );
+    mColorMap = mRenderer.Add2DTexture( colorImage,true );
     mMapSize = Dodo::uvec2(100u,100u);
     mElevation = mMapSize.x / 10.0f;
-    mGrid = mRenderManager.CreateQuad(mMapSize, true, true, mHeightmapSize );
+    mGrid = mRenderer.CreateQuad(mMapSize, true, true, mHeightmapSize );
 
     Dodo::Image cubemapImages[6];
     cubemapImages[0].LoadFromFile( "../resources/sky-box0/xpos.png", false);
@@ -164,14 +164,14 @@ public:
     cubemapImages[3].LoadFromFile( "../resources/sky-box0/yneg.png", false);
     cubemapImages[4].LoadFromFile( "../resources/sky-box0/zpos.png", false);
     cubemapImages[5].LoadFromFile( "../resources/sky-box0/zneg.png", false);
-    mCubeMap = mRenderManager.AddCubeTexture(&cubemapImages[0]);
-    mQuad = mRenderManager.CreateQuad(Dodo::uvec2(2u,2u),true,false );
+    mCubeMap = mRenderer.AddCubeTexture(&cubemapImages[0]);
+    mQuad = mRenderer.CreateQuad(Dodo::uvec2(2u,2u),true,false );
 
     //Set GL state
-    mRenderManager.SetCullFace( Dodo::CULL_NONE );
-    mRenderManager.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( Dodo::CULL_NONE );
+    mRenderer.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
 
 
     lightAnimation.mDuration = 10.0f;
@@ -187,41 +187,41 @@ public:
 
   void Render()
   {
-    mRenderManager.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
+    mRenderer.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
 
     lightAnimation.Run( GetTimeDelta() );
     //Draw skybox
-    mRenderManager.UseProgram( mSkyboxShader );
-    mRenderManager.BindCubeTexture( mCubeMap, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uTexture0"), 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uViewProjectionInverse"), mSkyBoxTransform );
-    mRenderManager.DisableDepthWrite();
-    mRenderManager.SetupMeshVertexFormat( mQuad );
-    mRenderManager.DrawMesh( mQuad );
-    mRenderManager.EnableDepthWrite();
+    mRenderer.UseProgram( mSkyboxShader );
+    mRenderer.BindCubeTexture( mCubeMap, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mSkyboxShader,"uTexture0"), 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mSkyboxShader,"uViewProjectionInverse"), mSkyBoxTransform );
+    mRenderer.DisableDepthWrite();
+    mRenderer.SetupMeshVertexFormat( mQuad );
+    mRenderer.DrawMesh( mQuad );
+    mRenderer.EnableDepthWrite();
 
     //Draw terrain
     Dodo::mat4 modelMatrix;
     mTxManager.GetWorldTransform( mTxId0, &modelMatrix );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModel"),  modelMatrix  );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uElevation"), mElevation);
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uLightDirection"), lightAnimation.mLightDirection );
-    mRenderManager.Bind2DTexture( mHeightMap, 0 );
-    mRenderManager.Bind2DTexture( mColorMap, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uHeightMapSize"), mHeightmapSize );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uMapSize"), mMapSize );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture"), 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uColorTexture"), 1 );
-    mRenderManager.SetupMeshVertexFormat( mGrid );
-    mRenderManager.DrawMesh( mGrid );
+    mRenderer.UseProgram( mShader );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModel"),  modelMatrix  );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uElevation"), mElevation);
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uLightDirection"), lightAnimation.mLightDirection );
+    mRenderer.Bind2DTexture( mHeightMap, 0 );
+    mRenderer.Bind2DTexture( mColorMap, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uHeightMapSize"), mHeightmapSize );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uMapSize"), mMapSize );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uTexture"), 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uColorTexture"), 1 );
+    mRenderer.SetupMeshVertexFormat( mGrid );
+    mRenderer.DrawMesh( mGrid );
   }
 
   void OnResize(size_t width, size_t height )
   {
 
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
   }
 
@@ -263,13 +263,13 @@ public:
         case 'z':
         {
           factor-=0.1f;
-          mRenderManager.SetViewport( mWindowSize.x * (1.0f - factor)/2.0f, mWindowSize.y * (1.0f - factor)/2.0f, mWindowSize.x*factor, mWindowSize.y*factor );
+          mRenderer.SetViewport( mWindowSize.x * (1.0f - factor)/2.0f, mWindowSize.y * (1.0f - factor)/2.0f, mWindowSize.x*factor, mWindowSize.y*factor );
           break;
         }
         case 'x':
         {
           factor+=0.1f;  
-          mRenderManager.SetViewport( mWindowSize.x * (1.0f - factor)/2.0f, mWindowSize.y * (1.0f - factor)/2.0f, mWindowSize.x*factor, mWindowSize.y*factor );
+          mRenderer.SetViewport( mWindowSize.x * (1.0f - factor)/2.0f, mWindowSize.y * (1.0f - factor)/2.0f, mWindowSize.x*factor, mWindowSize.y*factor );
           break;
         }
         default:

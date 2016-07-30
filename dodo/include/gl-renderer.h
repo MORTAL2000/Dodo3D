@@ -101,10 +101,10 @@ enum CubeTextureSide
   CUBE_NEGATIVE_Z = 5
 };
 
-struct RenderManager
+struct GLRenderer
 {
-  RenderManager();
-  ~RenderManager();
+  GLRenderer();
+  ~GLRenderer();
 
   void Init();
 

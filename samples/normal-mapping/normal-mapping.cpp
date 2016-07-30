@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <camera.h>
 
 using namespace Dodo;
@@ -63,11 +63,11 @@ const char* gFragmentShaderSourceDiffuse[] = {
 }
 
 
-class App : public Dodo::Application
+class App : public Dodo::GLApplication
 {
 public:
   App()
-:Dodo::Application("Demo",500,500,4,4),
+:Dodo::GLApplication("Demo",500,500,4,4),
  mTxManager(1),
  mCamera(Dodo::vec3(0.0f,6.0f,8.0f), Dodo::vec2(0.0f,0.0f), 1.0f ),
  mAngle(0.0),
@@ -87,42 +87,42 @@ public:
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( Dodo::DegreeToRadian(75.0f),(f32)mWindowSize.x / (f32)mWindowSize.y,1.0f,500.0f );
 
     //Load resources
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
     Dodo::Image normalImage("../resources/bric_normal.png");
-    mNormalMap = mRenderManager.Add2DTexture( normalImage,true );
+    mNormalMap = mRenderer.Add2DTexture( normalImage,true );
     Dodo::Image colorImage("../resources/bric_diffuse.png");
-    mColorMap = mRenderManager.Add2DTexture( colorImage,true );
-    mQuad = mRenderManager.CreateQuad(Dodo::uvec2(10u,10u), true, true );
+    mColorMap = mRenderer.Add2DTexture( colorImage,true );
+    mQuad = mRenderer.CreateQuad(Dodo::uvec2(10u,10u), true, true );
 
     //Set GL state
-    mRenderManager.SetCullFace( Dodo::CULL_NONE );
-    mRenderManager.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( Dodo::CULL_NONE );
+    mRenderer.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( Dodo::vec4(0.1f,0.0f,0.65f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void Render()
   {
-    mRenderManager.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
+    mRenderer.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
 
     //Draw mesh
     Dodo::mat4 modelMatrix;
     mTxManager.GetWorldTransform( mTxId0, &modelMatrix );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"),  modelMatrix * mCamera.txInverse );
-    mRenderManager.Bind2DTexture( mColorMap, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uColorMap"), 0 );
-    mRenderManager.Bind2DTexture( mNormalMap, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uNormalMap"), 1 );
-    mRenderManager.SetupMeshVertexFormat( mQuad );
-    mRenderManager.DrawMesh( mQuad );
+    mRenderer.UseProgram( mShader );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uView"), mCamera.txInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelView"),  modelMatrix * mCamera.txInverse );
+    mRenderer.Bind2DTexture( mColorMap, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uColorMap"), 0 );
+    mRenderer.Bind2DTexture( mNormalMap, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uNormalMap"), 1 );
+    mRenderer.SetupMeshVertexFormat( mQuad );
+    mRenderer.DrawMesh( mQuad );
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
   }
 

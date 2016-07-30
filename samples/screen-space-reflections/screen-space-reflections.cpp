@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <material.h>
 #include <camera.h>
 
@@ -129,12 +129,12 @@ const char* gFragmentShaderFullscreen[] = {
 
 }
 
-class App : public Application
+class App : public GLApplication
 {
 public:
 
   App()
-  :Application("Demo",500,500,4,4),
+  :GLApplication("Demo",500,500,4,4),
    mMeshes(0),
    mMaterials(0),
    mMeshCount(0),
@@ -153,86 +153,86 @@ public:
   void Init()
   {
     //Create a shader
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
-    mShaderFullScreen = mRenderManager.AddProgram((const u8**)gVertexShaderFullscreen, (const u8**)gFragmentShaderFullscreen);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mShaderFullScreen = mRenderer.AddProgram((const u8**)gVertexShaderFullscreen, (const u8**)gFragmentShaderFullscreen);
 
     //Load meshes
-    mMeshCount = mRenderManager.GetMeshCountFromFile("../resources/cornell-box.obj");
+    mMeshCount = mRenderer.GetMeshCountFromFile("../resources/cornell-box.obj");
     mMeshes = new MeshId[mMeshCount];
     mMaterials = new Material[mMeshCount];
-    mRenderManager.AddMultipleMeshesFromFile("../resources/cornell-box.obj", mMeshes, mMaterials, mMeshCount );
+    mRenderer.AddMultipleMeshesFromFile("../resources/cornell-box.obj", mMeshes, mMaterials, mMeshCount );
 
     //Create offscreen framebuffer
-    mOffscreenFrameBuffer =  mRenderManager.AddFrameBuffer();
-    mColorBuffer = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
-    mDepthStencilBuffer = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mOffscreenFrameBuffer, 0, mColorBuffer );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
-    mFullscreenQuad = mRenderManager.CreateQuad(Dodo::uvec2(2u,2u),true,false );
+    mOffscreenFrameBuffer =  mRenderer.AddFrameBuffer();
+    mColorBuffer = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
+    mDepthStencilBuffer = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
+    mRenderer.Attach2DColorTextureToFrameBuffer( mOffscreenFrameBuffer, 0, mColorBuffer );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
+    mFullscreenQuad = mRenderer.CreateQuad(Dodo::uvec2(2u,2u),true,false );
 
     //Set GL state
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( vec4(0.0f,0.0f,0.0f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( vec4(0.0f,0.0f,0.0f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void Render()
   {
     //Draw scene to an offscreen buffer
-    mRenderManager.BindFrameBuffer( mOffscreenFrameBuffer );
-    mRenderManager.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), mCamera.txInverse );
+    mRenderer.BindFrameBuffer( mOffscreenFrameBuffer );
+    mRenderer.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.UseProgram( mShader );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelView"), mCamera.txInverse );
 
     for( u32 i(0); i<mMeshCount; ++i )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
-      mRenderManager.SetupMeshVertexFormat( mMeshes[i] );
-      mRenderManager.DrawMesh( mMeshes[i] );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uDiffuseColor"), mMaterials[i].mDiffuseColor );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uSpecularColor"), mMaterials[i].mSpecularColor );
+      mRenderer.SetupMeshVertexFormat( mMeshes[i] );
+      mRenderer.DrawMesh( mMeshes[i] );
     }
 
     //Draw specular reflections using Screen Space raytracing
-    mRenderManager.BindFrameBuffer( 0 );
-    mRenderManager.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
-    mRenderManager.UseProgram( mShaderFullScreen );
+    mRenderer.BindFrameBuffer( 0 );
+    mRenderer.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.UseProgram( mShaderFullScreen );
 
     //Setup uniforms
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uModelViewProjection"), mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uModelView"), mCamera.txInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uProjection"), mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uProjectionInverse"), mProjectionInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uCameraNearFar"), vec2(0.1f,100.0f) );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y )  );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uModelViewProjection"), mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uModelView"), mCamera.txInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uProjection"), mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uProjectionInverse"), mProjectionInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uCameraNearFar"), vec2(0.1f,100.0f) );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y )  );
 
     //Bind textures
-    mRenderManager.Bind2DTexture( mColorBuffer, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uColorBuffer"), 0 );
-    mRenderManager.Bind2DTexture( mDepthStencilBuffer, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uDepthStencilBuffer"), 1 );
+    mRenderer.Bind2DTexture( mColorBuffer, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uColorBuffer"), 0 );
+    mRenderer.Bind2DTexture( mDepthStencilBuffer, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uDepthStencilBuffer"), 1 );
     for( u32 i(0); i<mMeshCount; ++i )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFullScreen,"uSpecularColor"), mMaterials[i].mSpecularColor );
-      mRenderManager.SetupMeshVertexFormat( mMeshes[i] );
-      mRenderManager.DrawMesh( mMeshes[i] );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFullScreen,"uSpecularColor"), mMaterials[i].mSpecularColor );
+      mRenderer.SetupMeshVertexFormat( mMeshes[i] );
+      mRenderer.DrawMesh( mMeshes[i] );
     }
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.1f,100.0f );
     ComputeInverse(mProjection,mProjectionInverse);
 
     //Re-do frame buffer attachments to match new window size
-    mRenderManager.RemoveTexture(mColorBuffer);
-    mRenderManager.RemoveTexture(mDepthStencilBuffer);
-    mColorBuffer = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
-    mDepthStencilBuffer = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mOffscreenFrameBuffer, 0, mColorBuffer );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
+    mRenderer.RemoveTexture(mColorBuffer);
+    mRenderer.RemoveTexture(mDepthStencilBuffer);
+    mColorBuffer = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
+    mDepthStencilBuffer = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mOffscreenFrameBuffer, 0, mColorBuffer );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mOffscreenFrameBuffer, mDepthStencilBuffer );
   }
 
   void OnKey( Key key, bool pressed )

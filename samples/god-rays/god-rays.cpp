@@ -1,5 +1,5 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <maths.h>
 #include <types.h>
 #include <camera.h>
@@ -98,12 +98,12 @@ const char* gFSGodRays[] = {
 }
 
 
-class App : public Dodo::Application
+class App : public Dodo::GLApplication
 {
 public:
 
   App()
-  :Dodo::Application("Demo",800,800,4,4),
+  :Dodo::GLApplication("Demo",800,800,4,4),
    mCamera(Dodo::vec3(0.0f,10.0f,36.0f), Dodo::vec2(0.0f,0.0f), 1.0f ),
    mMousePosition(0.0f,0.0f),
    mMouseButtonPressed(false)
@@ -119,27 +119,27 @@ public:
     mLightTx = Dodo::ComputeTransform(Dodo::vec3(0.0f,60.0f,-120.0f), Dodo::vec3(13.0f,13.0f,13.0f), Dodo::QUAT_UNIT );
 
     //Create shaders
-    mShaderFirstPass = mRenderManager.AddProgram((const u8**)gVSFirstPass, (const u8**)gFSFirstPass);
-    mShaderDiffuse = mRenderManager.AddProgram((const u8**)gVSDiffuse, (const u8**)gFSDiffuse);
-    mShaderGodRays = mRenderManager.AddProgram((const u8**)gVSGodRays, (const u8**)gFSGodRays);
+    mShaderFirstPass = mRenderer.AddProgram((const u8**)gVSFirstPass, (const u8**)gFSFirstPass);
+    mShaderDiffuse = mRenderer.AddProgram((const u8**)gVSDiffuse, (const u8**)gFSDiffuse);
+    mShaderGodRays = mRenderer.AddProgram((const u8**)gVSGodRays, (const u8**)gFSGodRays);
 
     //Load assets
     Dodo::Image colorImage("../resources/diffuse.jpg");
-    mColorMap = mRenderManager.Add2DTexture( colorImage,true );
-    mMesh = mRenderManager.AddMeshFromFile( "../resources/farmhouse.obj" );
-    mSun = mRenderManager.AddMeshFromFile( "../resources/sphere.obj" );
+    mColorMap = mRenderer.Add2DTexture( colorImage,true );
+    mMesh = mRenderer.AddMeshFromFile( "../resources/farmhouse.obj" );
+    mSun = mRenderer.AddMeshFromFile( "../resources/sphere.obj" );
 
     //Create fbo for off screen rendering
-    mFbo =  mRenderManager.AddFrameBuffer();
-    mColorAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mFbo =  mRenderer.AddFrameBuffer();
+    mColorAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ));
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
 
     //Set GL state
-    mRenderManager.SetCullFace( Dodo::CULL_BACK );
-    mRenderManager.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( Dodo::CULL_BACK );
+    mRenderer.SetDepthTest( Dodo::DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void Render()
@@ -147,65 +147,65 @@ public:
     /*
      * Render to an off-screen buffer the occluders and the light
      */
-    mRenderManager.BindFrameBuffer( mFbo );
-    mRenderManager.SetClearColor( Dodo::vec4(0.0f,0.0f,0.0f,1.0f));
-    mRenderManager.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
+    mRenderer.BindFrameBuffer( mFbo );
+    mRenderer.SetClearColor( Dodo::vec4(0.0f,0.0f,0.0f,1.0f));
+    mRenderer.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
 
     //Occluders
     Dodo::mat4 objectMVP = mObjectTx * mCamera.txInverse * mProjection;
-    mRenderManager.UseProgram( mShaderFirstPass );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFirstPass,"uModelViewProjection"), objectMVP  );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFirstPass,"uEmissiveColor"), vec3(0.0f,0.0f,0.0f) );
-    mRenderManager.SetupMeshVertexFormat( mMesh );
-    mRenderManager.DrawMesh( mMesh );
+    mRenderer.UseProgram( mShaderFirstPass );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFirstPass,"uModelViewProjection"), objectMVP  );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFirstPass,"uEmissiveColor"), vec3(0.0f,0.0f,0.0f) );
+    mRenderer.SetupMeshVertexFormat( mMesh );
+    mRenderer.DrawMesh( mMesh );
 
     //Light
     Dodo::mat4 lightMVP = mLightTx * mCamera.txInverse * mProjection;
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFirstPass,"uModelViewProjection"), lightMVP );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderFirstPass,"uEmissiveColor"), vec3(1.0f,1.0f,1.0f) );
-    mRenderManager.SetupMeshVertexFormat( mSun );
-    mRenderManager.DrawMesh( mSun );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFirstPass,"uModelViewProjection"), lightMVP );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderFirstPass,"uEmissiveColor"), vec3(1.0f,1.0f,1.0f) );
+    mRenderer.SetupMeshVertexFormat( mSun );
+    mRenderer.DrawMesh( mSun );
 
 
     /*
      * Render the scene to the on-screen frame buffer
      */
-    mRenderManager.SetClearColor( Dodo::vec4(0.1f,0.1f,0.7f,1.0f));
-    mRenderManager.BindFrameBuffer( 0 );
-    mRenderManager.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
-    mRenderManager.UseProgram( mShaderDiffuse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderDiffuse,"uModelViewProjection"), objectMVP );
-    mRenderManager.Bind2DTexture( mColorMap, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderDiffuse,"uTexture"), 0 );
-    mRenderManager.SetupMeshVertexFormat( mMesh );
-    mRenderManager.DrawMesh( mMesh );
+    mRenderer.SetClearColor( Dodo::vec4(0.1f,0.1f,0.7f,1.0f));
+    mRenderer.BindFrameBuffer( 0 );
+    mRenderer.ClearBuffers(Dodo::COLOR_BUFFER | Dodo::DEPTH_BUFFER );
+    mRenderer.UseProgram( mShaderDiffuse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderDiffuse,"uModelViewProjection"), objectMVP );
+    mRenderer.Bind2DTexture( mColorMap, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderDiffuse,"uTexture"), 0 );
+    mRenderer.SetupMeshVertexFormat( mMesh );
+    mRenderer.DrawMesh( mMesh );
 
     /**
      * Render crepuscular rays on top with additive blending
      */
-    mRenderManager.SetBlendingMode( Dodo::BLEND_ADD );
-    mRenderManager.SetBlendingFunction( BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE);
-    mRenderManager.UseProgram( mShaderGodRays );
-    mRenderManager.Bind2DTexture( mColorAttachment, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderGodRays,"uTexture"), 0 );
+    mRenderer.SetBlendingMode( Dodo::BLEND_ADD );
+    mRenderer.SetBlendingFunction( BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE);
+    mRenderer.UseProgram( mShaderGodRays );
+    mRenderer.Bind2DTexture( mColorAttachment, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderGodRays,"uTexture"), 0 );
     vec3 lightPositionScreenSpace = vec3(lightMVP[12]/lightMVP[15],lightMVP[13]/lightMVP[15],lightMVP[14]/lightMVP[15]);
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShaderGodRays,"uLightScreenSpace"), lightPositionScreenSpace );
-    mRenderManager.DrawCall( 3 );
-    mRenderManager.SetBlendingMode( Dodo::BLEND_DISABLED );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShaderGodRays,"uLightScreenSpace"), lightPositionScreenSpace );
+    mRenderer.DrawCall( 3 );
+    mRenderer.SetBlendingMode( Dodo::BLEND_DISABLED );
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = Dodo::ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
 
     //Recreate frame buffer images to match new window size
-    mRenderManager.RemoveTexture(mColorAttachment);
-    mRenderManager.RemoveTexture(mDepthStencilAttachment);
-    mColorAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mRenderer.RemoveTexture(mColorAttachment);
+    mRenderer.RemoveTexture(mDepthStencilAttachment);
+    mColorAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
   }
 
   void OnKey( Dodo::Key key, bool pressed )

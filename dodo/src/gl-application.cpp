@@ -1,4 +1,4 @@
-#include <application.h>
+#include <gl-application.h>
 
 #include <log.h>
 
@@ -9,9 +9,9 @@ typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXC
 
 using namespace Dodo;
 
-Application::Application(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion)
+GLApplication::GLApplication(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion)
 :mWindowSize(width, height),
- mRenderManager(),
+ mRenderer(),
  mDisplay(0),
  mWindow(0),
  mContext(0),
@@ -21,7 +21,7 @@ Application::Application(const char* title, u32 width, u32 height, u32 glMajorVe
   CreateXGLWindow(title, width, height, glMajorVersion, glMinorVersion);
 }
 
-Application::~Application()
+GLApplication::~GLApplication()
 {
   if( mDisplay )
   {
@@ -41,7 +41,7 @@ Application::~Application()
   }
 }
 
-bool Application::CreateXGLWindow(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion)
+bool GLApplication::CreateXGLWindow(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion)
 {
   mDisplay = XOpenDisplay(NULL);
   if( !mDisplay )
@@ -153,14 +153,14 @@ bool Application::CreateXGLWindow(const char* title, u32 width, u32 height, u32 
   XSetWMProtocols(mDisplay, mWindow, &wmDelete, 1);
 
   //Init render manager
-  mRenderManager.Init();
+  mRenderer.Init();
   glGetError();
-  mRenderManager.PrintInfo();
+  mRenderer.PrintInfo();
 
   return true;
 }
 
-void Application::MainLoop()
+void GLApplication::MainLoop()
 {
   Init();
 
@@ -243,33 +243,33 @@ void Application::MainLoop()
   }
 }
 
-void Application::Render()
+void GLApplication::Render()
 {
 }
 
-void Application::Init()
+void GLApplication::Init()
 {
 }
 
-void Application::OnResize( size_t width, size_t height )
+void GLApplication::OnResize( size_t width, size_t height )
 {
 }
 
-f32 Application::GetTimeDelta()
+f32 GLApplication::GetTimeDelta()
 {
   return mTimeDelta;
 }
 
-void Application::OnKey( Key key, bool pressed )
+void GLApplication::OnKey( Key key, bool pressed )
 {}
 
-void Application::OnMouseMove( f32 x, f32 y )
+void GLApplication::OnMouseMove( f32 x, f32 y )
 {}
 
-void Application::OnMouseButton( MouseButton button, f32 x, f32 y, bool pressed )
+void GLApplication::OnMouseButton( MouseButton button, f32 x, f32 y, bool pressed )
 {}
 
-Key Application::KeyFromKeyCode( unsigned int keycode )
+Key GLApplication::KeyFromKeyCode( unsigned int keycode )
 {
   switch( keycode )
   {

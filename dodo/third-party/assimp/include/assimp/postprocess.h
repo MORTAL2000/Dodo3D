@@ -553,7 +553,7 @@ enum aiPostProcessSteps
 /** @def aiProcessPreset_TargetRealtimeUse_Fast
  *  @brief Default postprocess configuration optimizing the data for real-time rendering.
  *  
- *  Applications would want to use this preset to load models on end-user PCs,
+ *  GLApplications would want to use this preset to load models on end-user PCs,
  *  maybe for direct use in game.
  *
  * If you're using DirectX, don't forget to combine this value with

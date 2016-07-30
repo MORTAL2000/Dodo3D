@@ -1,5 +1,5 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
@@ -131,11 +131,11 @@ const char* gFragmentShaderPointLight[] = {
 };
 }
 
-class App : public Application
+class App : public GLApplication
 {
 public:
   App()
-:Application("Demo",500,500,4,4),
+:GLApplication("Demo",500,500,4,4),
  mTxManager( OBJECT_COUNT ),
  mCamera( vec3(0.0f,0.0f,50.0f), vec2(0.0f,0.0f), 100.0f ),
  mMousePosition(0.0f,0.0f),
@@ -149,16 +149,16 @@ public:
   void Init()
   {
     //Load shaders
-    mGBufferShader = mRenderManager.AddProgram( (const u8**)gVertexShaderGBuffer, (const u8**)gFragmentShaderGBuffer );
-    mColorShader = mRenderManager.AddProgram( (const u8**)gVertexShaderColor, (const u8**)gFragmentShaderColor );
-    mPointLightShader = mRenderManager.AddProgram( (const u8**)gVertexShaderPointLight, (const u8**)gFragmentShaderPointLight );
+    mGBufferShader = mRenderer.AddProgram( (const u8**)gVertexShaderGBuffer, (const u8**)gFragmentShaderGBuffer );
+    mColorShader = mRenderer.AddProgram( (const u8**)gVertexShaderColor, (const u8**)gFragmentShaderColor );
+    mPointLightShader = mRenderer.AddProgram( (const u8**)gVertexShaderPointLight, (const u8**)gFragmentShaderPointLight );
 
     //Load meshes
-    mMesh = mRenderManager.AddMeshFromFile( "../resources/jeep.ms3d" );
-    mSphere = mRenderManager.AddMeshFromFile( "../resources/sphere.obj" );
+    mMesh = mRenderer.AddMeshFromFile( "../resources/jeep.ms3d" );
+    mSphere = mRenderer.AddMeshFromFile( "../resources/sphere.obj" );
 
     //Load textures
-    mTexture = mRenderManager.Add2DTexture( Image("../resources/jeep.jpg") );
+    mTexture = mRenderer.Add2DTexture( Image("../resources/jeep.jpg") );
 
     for( u32 i(0); i<OBJECT_COUNT; ++i )
     {
@@ -174,22 +174,22 @@ public:
     }
 
     //Create GBuffer
-    mFbo =  mRenderManager.AddFrameBuffer();
-    mColorAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
-    mNormalAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 1, mNormalAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
-    mRenderManager.BindFrameBuffer( mFbo );
+    mFbo =  mRenderer.AddFrameBuffer();
+    mColorAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
+    mNormalAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ), false);
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ), false);
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 1, mNormalAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mRenderer.BindFrameBuffer( mFbo );
     u32 buffers[2] = {0u,1u};
-    mRenderManager.SetDrawBuffers( 2, &buffers[0]);
+    mRenderer.SetDrawBuffers( 2, &buffers[0]);
 
     //Set GL state
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( vec4(0.0f,0.0f,0.0f,0.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( vec4(0.0f,0.0f,0.0f,0.0f));
+    mRenderer.SetClearDepth( 1.0f );
   }
 
   void AnimateLights( f32 timeDelta )
@@ -225,69 +225,69 @@ public:
   {
     //Animate lights
     AnimateLights( GetTimeDelta() );
-    mRenderManager.SetCullFace( CULL_BACK );
+    mRenderer.SetCullFace( CULL_BACK );
     //Build GBuffer
-    mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.BindFrameBuffer( mFbo );
-    mRenderManager.ClearBuffers( DEPTH_BUFFER );
-    mRenderManager.ClearColorAttachment( 0, vec4(0.0f,0.0f,0.0f,0.0f) );
-    mRenderManager.ClearColorAttachment( 1, vec4(0.0f,0.0f,0.0f,0.0f) );
-    mRenderManager.UseProgram( mGBufferShader );
-    mRenderManager.Bind2DTexture( mTexture, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mGBufferShader,"uTexture0"), 0 );
-    mRenderManager.BindUniformBuffer( mMatrixBuffer, 0 );
-    mRenderManager.SetupMeshVertexFormat( mMesh );
+    mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
+    mRenderer.BindFrameBuffer( mFbo );
+    mRenderer.ClearBuffers( DEPTH_BUFFER );
+    mRenderer.ClearColorAttachment( 0, vec4(0.0f,0.0f,0.0f,0.0f) );
+    mRenderer.ClearColorAttachment( 1, vec4(0.0f,0.0f,0.0f,0.0f) );
+    mRenderer.UseProgram( mGBufferShader );
+    mRenderer.Bind2DTexture( mTexture, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mGBufferShader,"uTexture0"), 0 );
+    mRenderer.BindUniformBuffer( mMatrixBuffer, 0 );
+    mRenderer.SetupMeshVertexFormat( mMesh );
     for( u32 i(0); i<OBJECT_COUNT; ++i )
     {
       mat4 modelMatrix;
       mTxManager.GetWorldTransform(mObjectTx[i], &modelMatrix );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mGBufferShader,"uModelMatrix"), modelMatrix );
-      mRenderManager.DrawMesh( mMesh );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mGBufferShader,"uModelMatrix"), modelMatrix );
+      mRenderer.DrawMesh( mMesh );
     }
 
     //Draw light volumes to illuminate
-    mRenderManager.SetCullFace( CULL_FRONT );
-    mRenderManager.SetBlendingMode(BLEND_ADD);
-    mRenderManager.SetBlendingFunction( BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE );
-    mRenderManager.SetDepthTest( DEPTH_TEST_ALWAYS );
-    mRenderManager.BindFrameBuffer( 0 );
-    mRenderManager.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
-    mRenderManager.UseProgram( mPointLightShader );
-    mRenderManager.BindUniformBuffer( mMatrixBuffer, 0 );
-    mRenderManager.Bind2DTexture( mColorAttachment, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uTexture0"), 0 );
-    mRenderManager.Bind2DTexture( mNormalAttachment, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uTexture1"), 1 );
-    mRenderManager.Bind2DTexture( mDepthStencilAttachment, 2 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uTexture2"), 2 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uRadius"), 25.0f );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uProjectionInverse"), mProjectionInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y ) );
+    mRenderer.SetCullFace( CULL_FRONT );
+    mRenderer.SetBlendingMode(BLEND_ADD);
+    mRenderer.SetBlendingFunction( BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE, BLENDING_FUNCTION_ONE );
+    mRenderer.SetDepthTest( DEPTH_TEST_ALWAYS );
+    mRenderer.BindFrameBuffer( 0 );
+    mRenderer.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.UseProgram( mPointLightShader );
+    mRenderer.BindUniformBuffer( mMatrixBuffer, 0 );
+    mRenderer.Bind2DTexture( mColorAttachment, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uTexture0"), 0 );
+    mRenderer.Bind2DTexture( mNormalAttachment, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uTexture1"), 1 );
+    mRenderer.Bind2DTexture( mDepthStencilAttachment, 2 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uTexture2"), 2 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uRadius"), 25.0f );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uProjectionInverse"), mProjectionInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y ) );
     for( u32 i(0); i<LIGHT_COUNT; ++i )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uLightPosition"), mLightPosition[i] );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uLightPosition"), mLightPosition[i] );
       vec4 lightPositionViewSpace = vec4(mLightPosition[i].x, mLightPosition[i].y, mLightPosition[i].z, 1.0f ) * mCamera.txInverse;
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uLightPositionViewSpace"), lightPositionViewSpace.xyz() );
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mPointLightShader,"uLightColor"), mLightColor[i] );
-      mRenderManager.SetupMeshVertexFormat( mSphere );
-      mRenderManager.DrawMesh( mSphere );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uLightPositionViewSpace"), lightPositionViewSpace.xyz() );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mPointLightShader,"uLightColor"), mLightColor[i] );
+      mRenderer.SetupMeshVertexFormat( mSphere );
+      mRenderer.DrawMesh( mSphere );
     }
 
     //Draw lights
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetBlendingMode(BLEND_DISABLED);
-    mRenderManager.UseProgram( mColorShader );
-    mRenderManager.BindUniformBuffer( mMatrixBuffer, 0 );
-    mRenderManager.Bind2DTexture( mDepthStencilAttachment, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mColorShader,"uTexture0"), 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mColorShader,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y ) );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mColorShader,"uScale"), 0.5f );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetBlendingMode(BLEND_DISABLED);
+    mRenderer.UseProgram( mColorShader );
+    mRenderer.BindUniformBuffer( mMatrixBuffer, 0 );
+    mRenderer.Bind2DTexture( mDepthStencilAttachment, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mColorShader,"uTexture0"), 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mColorShader,"uTextureSize"), vec2( mWindowSize.x, mWindowSize.y ) );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mColorShader,"uScale"), 0.5f );
     for( u32 i(0); i<LIGHT_COUNT; ++i )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mColorShader,"uPosition"), mLightPosition[i]);
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation( mColorShader, "uColor"), mLightColor[i] );
-      mRenderManager.SetupMeshVertexFormat( mSphere );
-      mRenderManager.DrawMesh( mSphere );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mColorShader,"uPosition"), mLightPosition[i]);
+      mRenderer.SetUniform( mRenderer.GetUniformLocation( mColorShader, "uColor"), mLightColor[i] );
+      mRenderer.SetupMeshVertexFormat( mSphere );
+      mRenderer.DrawMesh( mSphere );
     }
   }
 
@@ -300,39 +300,39 @@ public:
       data[0] = mCamera.txInverse;
       data[1] = mProjection;
       data[2] = mCamera.txInverse * mProjection;
-      mMatrixBuffer = mRenderManager.AddBuffer( sizeof(data), data );
+      mMatrixBuffer = mRenderer.AddBuffer( sizeof(data), data );
     }
     else
     {
-      mat4* bufferData = (mat4*)mRenderManager.MapBuffer( mMatrixBuffer, BUFFER_MAP_WRITE );
+      mat4* bufferData = (mat4*)mRenderer.MapBuffer( mMatrixBuffer, BUFFER_MAP_WRITE );
       if(bufferData)
       {
         bufferData[0] = mCamera.txInverse;
         bufferData[1] = mProjection;
         bufferData[2] = mCamera.txInverse * mProjection;
-        mRenderManager.UnmapBuffer();
+        mRenderer.UnmapBuffer();
       }
     }
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
 
     mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
     ComputeInverse( mProjection, mProjectionInverse );
     UpdateMatrixBuffer();
 
     //Recreate framebuffer attachments to match new size
-    mRenderManager.RemoveTexture(mColorAttachment);
-    mRenderManager.RemoveTexture(mNormalAttachment);
-    mRenderManager.RemoveTexture(mDepthStencilAttachment);
-    mColorAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
-    mNormalAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 1, mNormalAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mRenderer.RemoveTexture(mColorAttachment);
+    mRenderer.RemoveTexture(mNormalAttachment);
+    mRenderer.RemoveTexture(mDepthStencilAttachment);
+    mColorAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
+    mNormalAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 1, mNormalAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
   }
 
   void OnKey( Key key, bool pressed )

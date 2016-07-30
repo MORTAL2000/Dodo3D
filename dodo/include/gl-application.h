@@ -2,7 +2,7 @@
 
 #include <types.h>
 #include <GL/glx.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 
 namespace Dodo
 {
@@ -50,13 +50,13 @@ enum MouseButton
   MOUSE_RIGHT = 1
 };
 
-class Application
+class GLApplication
 {
 
 public:
 
-  Application(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion);
-  virtual ~Application();
+  GLApplication(const char* title, u32 width, u32 height, u32 glMajorVersion, u32 glMinorVersion);
+  virtual ~GLApplication();
 
   void MainLoop();
   virtual void Render();
@@ -68,7 +68,7 @@ public:
   f32 GetTimeDelta();
 
   uvec2       mWindowSize;
-  RenderManager mRenderManager;
+  GLRenderer  mRenderer;
 
 
 private:

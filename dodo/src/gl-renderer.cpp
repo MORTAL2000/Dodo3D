@@ -1,5 +1,5 @@
 
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <GL/glew.h>
 #include <log.h>
 #include <math.h>
@@ -226,7 +226,7 @@ GLenum GetGLBlendingFunction( BlendingFunction function )
   }
 }
 
-MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManager* renderManager, Material* material = 0)
+MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, GLRenderer* renderer, Material* material = 0)
 {
   Mesh newMesh;
 
@@ -342,12 +342,12 @@ MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManag
   DODO_LOG( "Center: (%f,%f,%f). Extents: (%f,%f,%f) ", newMesh.mAABB.mCenter.x, newMesh.mAABB.mCenter.y, newMesh.mAABB.mCenter.z,
             newMesh.mAABB.mExtents.x, newMesh.mAABB.mExtents.y,newMesh.mAABB.mExtents.z);
   //Create buffers
-  newMesh.mVertexBuffer = renderManager->AddBuffer( vertexBufferSize, vertexData );
+  newMesh.mVertexBuffer = renderer->AddBuffer( vertexBufferSize, vertexData );
   delete[] vertexData;
 
   if( indices )
   {
-    newMesh.mIndexBuffer = renderManager->AddBuffer( indexBufferSize, indices );
+    newMesh.mIndexBuffer = renderer->AddBuffer( indexBufferSize, indices );
     delete[] indices;
   }
 
@@ -384,12 +384,12 @@ MeshId AddSubMeshFromFile( const struct aiScene* scene, u32 submesh, RenderManag
     material->mSpecularColor = vec3( color.r, color.g, color.b );
   }
 
-  MeshId meshId( renderManager->AddMesh( newMesh ) );
+  MeshId meshId( renderer->AddMesh( newMesh ) );
   return meshId;
 }
 
 } //unnamed namespace
-RenderManager::RenderManager()
+GLRenderer::GLRenderer()
 :mMesh(0)
 ,mCurrentProgram(-1)
 ,mCurrentVertexBuffer(-1)
@@ -401,7 +401,7 @@ RenderManager::RenderManager()
 ,mIsBlendingEnabled(false)
 {}
 
-void RenderManager::Init()
+void GLRenderer::Init()
 {
   //Init glew
   glewExperimental = GL_TRUE;
@@ -413,7 +413,7 @@ void RenderManager::Init()
   BindVAO( AddVAO() );
 }
 
-RenderManager::~RenderManager()
+GLRenderer::~GLRenderer()
 {
   CHECK_GL_ERROR( glDeleteVertexArrays(mVAO.size(), mVAO.data() ) );
   CHECK_GL_ERROR( glDeleteBuffers( mBuffer.size(), mBuffer.data() ) );
@@ -426,7 +426,7 @@ RenderManager::~RenderManager()
   }
 }
 
-BufferId RenderManager::AddBuffer( size_t size, const void* data )
+BufferId GLRenderer::AddBuffer( size_t size, const void* data )
 {
   BufferId buffer(0);
   CHECK_GL_ERROR( glGenBuffers( 1, &buffer) );
@@ -439,7 +439,7 @@ BufferId RenderManager::AddBuffer( size_t size, const void* data )
   return buffer;
 }
 
-void RenderManager::RemoveBuffer(BufferId buffer)
+void GLRenderer::RemoveBuffer(BufferId buffer)
 {
   for( u32 i(0); i<mBuffer.size(); ++i )
   {
@@ -453,7 +453,7 @@ void RenderManager::RemoveBuffer(BufferId buffer)
   }
 }
 
-void RenderManager::UpdateBuffer(BufferId buffer, size_t size, void* data )
+void GLRenderer::UpdateBuffer(BufferId buffer, size_t size, void* data )
 {
   for( u32 i(0); i<mBuffer.size(); ++i )
   {
@@ -475,7 +475,7 @@ void RenderManager::UpdateBuffer(BufferId buffer, size_t size, void* data )
   }
 }
 
-void* RenderManager::MapBuffer( BufferId buffer, BufferMapMode mode )
+void* GLRenderer::MapBuffer( BufferId buffer, BufferMapMode mode )
 {
   CHECK_GL_ERROR( glBindBuffer( GL_COPY_WRITE_BUFFER, buffer ) );
 
@@ -496,12 +496,12 @@ void* RenderManager::MapBuffer( BufferId buffer, BufferMapMode mode )
   return result;
 }
 
-void RenderManager::UnmapBuffer()
+void GLRenderer::UnmapBuffer()
 {
   CHECK_GL_ERROR( glUnmapBuffer( GL_COPY_WRITE_BUFFER ) );
 }
 
-void RenderManager::BindVertexBuffer(BufferId buffer )
+void GLRenderer::BindVertexBuffer(BufferId buffer )
 {
   if( mCurrentVertexBuffer == -1 || (u32)mCurrentVertexBuffer != buffer )
   {
@@ -510,7 +510,7 @@ void RenderManager::BindVertexBuffer(BufferId buffer )
   }
 }
 
-void RenderManager::BindIndexBuffer(BufferId buffer )
+void GLRenderer::BindIndexBuffer(BufferId buffer )
 {
   if( mCurrentIndexBuffer == -1 || (u32)mCurrentIndexBuffer != buffer )
   {
@@ -519,17 +519,17 @@ void RenderManager::BindIndexBuffer(BufferId buffer )
   }
 }
 
-void RenderManager::BindUniformBuffer( BufferId bufferId, u32 bindingPoint )
+void GLRenderer::BindUniformBuffer( BufferId bufferId, u32 bindingPoint )
 {
   CHECK_GL_ERROR( glBindBufferBase( GL_UNIFORM_BUFFER, bindingPoint, bufferId ) );
 }
 
-void RenderManager::BindShaderStorageBuffer( BufferId bufferId, u32 bindingPoint  )
+void GLRenderer::BindShaderStorageBuffer( BufferId bufferId, u32 bindingPoint  )
 {
   CHECK_GL_ERROR( glBindBufferBase( GL_SHADER_STORAGE_BUFFER, bindingPoint, bufferId ) );
 }
 
-TextureId RenderManager::Add2DTexture(const Image& image, bool generateMipmaps)
+TextureId GLRenderer::Add2DTexture(const Image& image, bool generateMipmaps)
 {
   TextureId texture = 0;
 
@@ -569,7 +569,7 @@ TextureId RenderManager::Add2DTexture(const Image& image, bool generateMipmaps)
   return texture;
 }
 
-TextureId RenderManager::Add2DTexture(u32 width, u32 height, TextureFormat textureFormat, bool generateMipmaps)
+TextureId GLRenderer::Add2DTexture(u32 width, u32 height, TextureFormat textureFormat, bool generateMipmaps)
 {
   TextureId texture = 0;
 
@@ -604,7 +604,7 @@ TextureId RenderManager::Add2DTexture(u32 width, u32 height, TextureFormat textu
   return texture;
 }
 
-TextureId RenderManager::Add2DArrayTexture(TextureFormat format, u32 width, u32 height, u32 layers, bool generateMipmaps)
+TextureId GLRenderer::Add2DArrayTexture(TextureFormat format, u32 width, u32 height, u32 layers, bool generateMipmaps)
 {
   TextureId texture;
   GLenum dataFormat,internalFormat,glDataType;
@@ -640,7 +640,7 @@ TextureId RenderManager::Add2DArrayTexture(TextureFormat format, u32 width, u32 
   return texture;
 }
 
-TextureId RenderManager::AddCubeTexture( Image* images, bool generateMipmaps )
+TextureId GLRenderer::AddCubeTexture( Image* images, bool generateMipmaps )
 {
   TextureId texture;
   GLenum dataFormat,internalFormat,glDataType;
@@ -673,7 +673,7 @@ TextureId RenderManager::AddCubeTexture( Image* images, bool generateMipmaps )
 
 }
 
-void RenderManager::RemoveTexture(TextureId textureId)
+void GLRenderer::RemoveTexture(TextureId textureId)
 {
   for( u32 i(0); i<mTexture.size(); ++i )
   {
@@ -686,10 +686,10 @@ void RenderManager::RemoveTexture(TextureId textureId)
   }
 }
 
-void RenderManager::UpdateTexture(TextureId textureId )
+void GLRenderer::UpdateTexture(TextureId textureId )
 {}
 
-void RenderManager::Update2DTextureFromBuffer(TextureId textureId, u32 width, u32 height, TextureFormat format, BufferId bufferId )
+void GLRenderer::Update2DTextureFromBuffer(TextureId textureId, u32 width, u32 height, TextureFormat format, BufferId bufferId )
 {
   GLenum dataFormat,internalFormat,glDataType;
   if( !GetTextureGLFormat( format, dataFormat, internalFormat, glDataType ) )
@@ -718,7 +718,7 @@ void RenderManager::Update2DTextureFromBuffer(TextureId textureId, u32 width, u3
   }
 }
 
-void RenderManager::Update2DArrayTexture( TextureId textureId, u32 layer, const Image& image )
+void GLRenderer::Update2DArrayTexture( TextureId textureId, u32 layer, const Image& image )
 {
   GLenum dataFormat,internalFormat,glDataType;
   if( !GetTextureGLFormat( image.mFormat, dataFormat, internalFormat, glDataType ) )
@@ -738,23 +738,23 @@ void RenderManager::Update2DArrayTexture( TextureId textureId, u32 layer, const 
                    image.mData);
 }
 
-void RenderManager::UpdateCubeTexture( TextureId textureId, CubeTextureSide side, const Image& image )
+void GLRenderer::UpdateCubeTexture( TextureId textureId, CubeTextureSide side, const Image& image )
 {}
 
-void RenderManager::Bind2DTexture( TextureId textureId, u32 textureUnit )
+void GLRenderer::Bind2DTexture( TextureId textureId, u32 textureUnit )
 {
   CHECK_GL_ERROR( glActiveTexture( GL_TEXTURE0 + textureUnit) );
   CHECK_GL_ERROR( glBindTexture(GL_TEXTURE_2D, textureId) );
 }
 
-void RenderManager::Bind2DArrayTexture( TextureId textureId, u32 textureUnit )
+void GLRenderer::Bind2DArrayTexture( TextureId textureId, u32 textureUnit )
 {
   CHECK_GL_ERROR( glActiveTexture( GL_TEXTURE0 + textureUnit) );
   CHECK_GL_ERROR( glBindTexture(GL_TEXTURE_2D_ARRAY, textureId) );
 
 }
 
-void RenderManager::BindCubeTexture( TextureId textureId, u32 textureUnit )
+void GLRenderer::BindCubeTexture( TextureId textureId, u32 textureUnit )
 {
   //if( mCurrent2DArrayTexture == -1 || (u32)mCurrent2DArrayTexture != textureId )
   {
@@ -764,7 +764,7 @@ void RenderManager::BindCubeTexture( TextureId textureId, u32 textureUnit )
 }
 
 
-ProgramId RenderManager::AddProgram( const u8** vertexShaderSource, const u8** fragmentShaderSource )
+ProgramId GLRenderer::AddProgram( const u8** vertexShaderSource, const u8** fragmentShaderSource )
 {
   //Compile vertex shader
   GLuint vertexShader = CHECK_GL_ERROR( glCreateShader( GL_VERTEX_SHADER ));
@@ -799,7 +799,7 @@ ProgramId RenderManager::AddProgram( const u8** vertexShaderSource, const u8** f
   return program;
 }
 
-void RenderManager::RemoveProgram( u32 program )
+void GLRenderer::RemoveProgram( u32 program )
 {
   for( u32 i(0); i<mProgram.size(); ++i )
   {
@@ -811,7 +811,7 @@ void RenderManager::RemoveProgram( u32 program )
   }
 }
 
-void RenderManager::UseProgram( ProgramId programId )
+void GLRenderer::UseProgram( ProgramId programId )
 {
   if( mCurrentProgram != (s32)programId )
   {
@@ -820,58 +820,58 @@ void RenderManager::UseProgram( ProgramId programId )
   }
 }
 
-ProgramId RenderManager::GetCurrentProgramId()
+ProgramId GLRenderer::GetCurrentProgramId()
 {
   return mCurrentProgram;
 }
 
-s32 RenderManager::GetUniformLocation( ProgramId programId, const char* name )
+s32 GLRenderer::GetUniformLocation( ProgramId programId, const char* name )
 {
   s32 location = CHECK_GL_ERROR( glGetUniformLocation( programId, name ) );
   return location;
 }
 
-void RenderManager::SetUniform( s32 location, f32 value )
+void GLRenderer::SetUniform( s32 location, f32 value )
 {
   CHECK_GL_ERROR( glUniform1f( location, value ) );
 }
 
-void RenderManager::SetUniform( s32 location, s32 value )
+void GLRenderer::SetUniform( s32 location, s32 value )
 {
   CHECK_GL_ERROR( glUniform1i( location, value ) );
 }
 
-void RenderManager::SetUniform( s32 location, u32 value )
+void GLRenderer::SetUniform( s32 location, u32 value )
 {
   CHECK_GL_ERROR( glUniform1ui( location, value ) );
 }
 
-void RenderManager::SetUniform( s32 location, const vec2& value )
+void GLRenderer::SetUniform( s32 location, const vec2& value )
 {
   CHECK_GL_ERROR( glUniform2fv( location, 1, value.data ) );
 }
 
-void RenderManager::SetUniform( s32 location, const uvec2& value )
+void GLRenderer::SetUniform( s32 location, const uvec2& value )
 {
   CHECK_GL_ERROR( glUniform2uiv( location, 1, value.data ) );
 }
 
-void RenderManager::SetUniform( s32 location, const vec3& value )
+void GLRenderer::SetUniform( s32 location, const vec3& value )
 {
   CHECK_GL_ERROR( glUniform3fv( location, 1, value.data ) );
 }
 
-void RenderManager::SetUniform( s32 location, vec3* value, u32 count )
+void GLRenderer::SetUniform( s32 location, vec3* value, u32 count )
 {
   CHECK_GL_ERROR( glUniform3fv( location, count, value->data )  );
 }
 
-void RenderManager::SetUniform( s32 location, const mat4& value )
+void GLRenderer::SetUniform( s32 location, const mat4& value )
 {
   CHECK_GL_ERROR( glUniformMatrix4fv( location, 1, GL_FALSE, value.data ) );
 }
 
-FBOId RenderManager::AddFrameBuffer()
+FBOId GLRenderer::AddFrameBuffer()
 {
   FBOId fbo(0);
   CHECK_GL_ERROR( glGenFramebuffers( 1, &fbo ) );
@@ -879,7 +879,7 @@ FBOId RenderManager::AddFrameBuffer()
   return fbo;
 }
 
-void RenderManager::RemoveFrameBuffer(FBOId fboId )
+void GLRenderer::RemoveFrameBuffer(FBOId fboId )
 {
   for( u32 i(0); i<mFrameBuffer.size(); ++i )
   {
@@ -891,7 +891,7 @@ void RenderManager::RemoveFrameBuffer(FBOId fboId )
   }
 }
 
-void RenderManager::BindFrameBuffer( FBOId fbo )
+void GLRenderer::BindFrameBuffer( FBOId fbo )
 {
   if( mCurrentFBO != fbo )
   {
@@ -900,7 +900,7 @@ void RenderManager::BindFrameBuffer( FBOId fbo )
   }
 }
 
-void RenderManager::SetDrawBuffers( u32 n, u32* buffers )
+void GLRenderer::SetDrawBuffers( u32 n, u32* buffers )
 {
   if( n == 0u )
   {
@@ -919,7 +919,7 @@ void RenderManager::SetDrawBuffers( u32 n, u32* buffers )
   }
 }
 
-void RenderManager::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level )
+void GLRenderer::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, TextureId texture, u32 level )
 {
   FBOId currentFBO = mCurrentFBO;
   BindFrameBuffer( fbo );
@@ -927,7 +927,7 @@ void RenderManager::Attach2DColorTextureToFrameBuffer( FBOId fbo, u32 index, Tex
   BindFrameBuffer( currentFBO );
 }
 
-void RenderManager::AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId texture, u32 level )
+void GLRenderer::AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId texture, u32 level )
 {
   FBOId currentFBO = mCurrentFBO;
   BindFrameBuffer( fbo );
@@ -935,12 +935,12 @@ void RenderManager::AttachDepthStencilTextureToFrameBuffer( FBOId fbo, TextureId
   BindFrameBuffer( currentFBO );
 }
 
-void RenderManager::ClearColorAttachment( u32 index, const vec4& value )
+void GLRenderer::ClearColorAttachment( u32 index, const vec4& value )
 {
   CHECK_GL_ERROR( glClearBufferfv( GL_COLOR, index, value.data ));
 }
 
-VAOId RenderManager::AddVAO()
+VAOId GLRenderer::AddVAO()
 {
   VAOId vao(0);
   CHECK_GL_ERROR( glGenVertexArrays(1, &vao) );
@@ -949,7 +949,7 @@ VAOId RenderManager::AddVAO()
   return vao;
 }
 
-void RenderManager::RemoveVAO(VAOId vao)
+void GLRenderer::RemoveVAO(VAOId vao)
 {
   for( u32 i(0); i<mVAO.size(); ++i )
   {
@@ -961,13 +961,13 @@ void RenderManager::RemoveVAO(VAOId vao)
   }
 }
 
-void RenderManager::BindVAO( VAOId vao)
+void GLRenderer::BindVAO( VAOId vao)
 {
   CHECK_GL_ERROR( glBindVertexArray(vao) );
 }
 
 
-MeshId RenderManager::AddMeshFromFile( const char* path, u32 submesh )
+MeshId GLRenderer::AddMeshFromFile( const char* path, u32 submesh )
 {
   //Load mesh
   const struct aiScene* scene = NULL;
@@ -982,13 +982,13 @@ MeshId RenderManager::AddMeshFromFile( const char* path, u32 submesh )
   return AddSubMeshFromFile( scene, submesh, this );
 }
 
-MeshId RenderManager::AddMesh( const Mesh& m )
+MeshId GLRenderer::AddMesh( const Mesh& m )
 {
   return mMesh->Add( m );
 }
 
 
-MeshId RenderManager::AddMesh( const void* vertexData, size_t vertexCount, VertexFormat vertexFormat, const unsigned int* index, size_t indexCount )
+MeshId GLRenderer::AddMesh( const void* vertexData, size_t vertexCount, VertexFormat vertexFormat, const unsigned int* index, size_t indexCount )
 {
   Mesh newMesh;
 
@@ -1013,7 +1013,7 @@ MeshId RenderManager::AddMesh( const void* vertexData, size_t vertexCount, Verte
   return meshId;
 }
 
-MeshId RenderManager::CreateQuad( const uvec2& size, bool generateUV, bool generateNormals, const uvec2& subdivision )
+MeshId GLRenderer::CreateQuad( const uvec2& size, bool generateUV, bool generateNormals, const uvec2& subdivision )
 {
   size_t vertexCount = (subdivision.x + 1)*(subdivision.y + 1);
 
@@ -1098,7 +1098,7 @@ MeshId RenderManager::CreateQuad( const uvec2& size, bool generateUV, bool gener
   return meshId;
 }
 
-u32 RenderManager::GetMeshCountFromFile( const char* path )
+u32 GLRenderer::GetMeshCountFromFile( const char* path )
 {
   u32 result(0);
   const struct aiScene* scene = NULL;
@@ -1115,7 +1115,7 @@ u32 RenderManager::GetMeshCountFromFile( const char* path )
   return result;
 }
 
-void RenderManager::AddMultipleMeshesFromFile( const char* path, MeshId* meshId, Material* materials, u32 count )
+void GLRenderer::AddMultipleMeshesFromFile( const char* path, MeshId* meshId, Material* materials, u32 count )
 {
   const struct aiScene* scene = NULL;
   scene = aiImportFile(path,aiProcessPreset_TargetRealtime_MaxQuality);
@@ -1141,13 +1141,13 @@ void RenderManager::AddMultipleMeshesFromFile( const char* path, MeshId* meshId,
   }
 }
 
-Mesh RenderManager::GetMesh( MeshId meshId )
+Mesh GLRenderer::GetMesh( MeshId meshId )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
   return *mesh;
 }
 
-void RenderManager::SetupMeshVertexFormat( MeshId meshId )
+void GLRenderer::SetupMeshVertexFormat( MeshId meshId )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
   if( !mesh )
@@ -1181,7 +1181,7 @@ void RenderManager::SetupMeshVertexFormat( MeshId meshId )
   }
 }
 
-void RenderManager::SetupInstancedAttribute( AttributeType type, const AttributeDescription& description )
+void GLRenderer::SetupInstancedAttribute( AttributeType type, const AttributeDescription& description )
 {
   BindVertexBuffer( description.mBuffer );
   CHECK_GL_ERROR( glEnableVertexAttribArray(type) );
@@ -1194,7 +1194,7 @@ void RenderManager::SetupInstancedAttribute( AttributeType type, const Attribute
   CHECK_GL_ERROR( glVertexAttribDivisor( type, description.mDivisor));
 }
 
-void RenderManager::DrawMesh( MeshId meshId )
+void GLRenderer::DrawMesh( MeshId meshId )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
   if( !mesh )
@@ -1221,12 +1221,12 @@ void RenderManager::DrawMesh( MeshId meshId )
   }
 }
 
-void RenderManager::DrawCall( u32 vertexCount )
+void GLRenderer::DrawCall( u32 vertexCount )
 {
   CHECK_GL_ERROR( glDrawArrays( GL_TRIANGLES, 0, vertexCount ) );
 }
 
-void RenderManager::DrawMeshInstanced( MeshId meshId, u32 instanceCount )
+void GLRenderer::DrawMeshInstanced( MeshId meshId, u32 instanceCount )
 {
   Mesh* mesh = mMesh->GetElement(meshId);
   if( !mesh )
@@ -1253,17 +1253,17 @@ void RenderManager::DrawMeshInstanced( MeshId meshId, u32 instanceCount )
   }
 }
 
-void RenderManager::SetClearColor(const vec4& color)
+void GLRenderer::SetClearColor(const vec4& color)
 {
   CHECK_GL_ERROR( glClearColor( color.x, color.y, color.z, color.w ) );
 }
 
-void RenderManager::SetClearDepth(f32 value)
+void GLRenderer::SetClearDepth(f32 value)
 {
   CHECK_GL_ERROR( glClearDepth(value) );
 }
 
-void RenderManager::ClearBuffers( u32 mask )
+void GLRenderer::ClearBuffers( u32 mask )
 {
   GLbitfield buffers(0);
 
@@ -1280,13 +1280,13 @@ void RenderManager::ClearBuffers( u32 mask )
   CHECK_GL_ERROR( glClear( buffers ) );
 }
 
-void RenderManager::SetViewport( s32 x, s32 y, size_t width, size_t height )
+void GLRenderer::SetViewport( s32 x, s32 y, size_t width, size_t height )
 {
   CHECK_GL_ERROR( glViewport( x, y, width, height ) );
 }
 
 
-void RenderManager::SetCullFace( CullFace cullFace )
+void GLRenderer::SetCullFace( CullFace cullFace )
 {
   if( cullFace == CULL_NONE )
   {
@@ -1319,7 +1319,7 @@ void RenderManager::SetCullFace( CullFace cullFace )
   }
 }
 
-void RenderManager::SetDepthTest( DepthTestFunction function)
+void GLRenderer::SetDepthTest( DepthTestFunction function)
 {
   if( function == DEPTH_TEST_DISABLED  )
   {
@@ -1376,17 +1376,17 @@ void RenderManager::SetDepthTest( DepthTestFunction function)
     }
   }
 }
-void RenderManager::DisableDepthWrite()
+void GLRenderer::DisableDepthWrite()
 {
   CHECK_GL_ERROR(glDepthMask(false));
 }
 
-void RenderManager::EnableDepthWrite()
+void GLRenderer::EnableDepthWrite()
 {
   CHECK_GL_ERROR(glDepthMask(true));
 }
 
-void RenderManager::Wired( bool wired)
+void GLRenderer::Wired( bool wired)
 {
   if( wired )
   {
@@ -1398,7 +1398,7 @@ void RenderManager::Wired( bool wired)
   }
 }
 
-void RenderManager::SetBlendingMode(BlendingMode mode)
+void GLRenderer::SetBlendingMode(BlendingMode mode)
 {
   if( mode == BLEND_DISABLED )
   {
@@ -1439,7 +1439,7 @@ void RenderManager::SetBlendingMode(BlendingMode mode)
   }
 }
 
-void RenderManager::SetBlendingFunction(BlendingFunction sourceColor, BlendingFunction destinationColor, BlendingFunction sourceAlpha, BlendingFunction destinationAlpha )
+void GLRenderer::SetBlendingFunction(BlendingFunction sourceColor, BlendingFunction destinationColor, BlendingFunction sourceAlpha, BlendingFunction destinationAlpha )
 {
   CHECK_GL_ERROR( glBlendFuncSeparate( GetGLBlendingFunction(sourceColor),
                                        GetGLBlendingFunction(destinationColor),
@@ -1449,7 +1449,7 @@ void RenderManager::SetBlendingFunction(BlendingFunction sourceColor, BlendingFu
 }
 
 
-void RenderManager::PrintInfo()
+void GLRenderer::PrintInfo()
 {
   const GLubyte* glVersion( glGetString(GL_VERSION) );
   const GLubyte* glslVersion( glGetString(  GL_SHADING_LANGUAGE_VERSION) );

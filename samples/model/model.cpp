@@ -1,10 +1,10 @@
 
-#include <application.h>
+#include <gl-application.h>
 #include <task.h>
 #include <tx-manager.h>
 #include <maths.h>
 #include <types.h>
-#include <render-manager.h>
+#include <gl-renderer.h>
 #include <camera.h>
 
 using namespace Dodo;
@@ -229,11 +229,11 @@ void ProjectCubeMapToSH( vec3* sh, Image* cubemapImages )
 
 
 
-class App : public Application
+class App : public GLApplication
 {
 public:
   App()
-:Application("Demo",500,500,4,4),
+:GLApplication("Demo",500,500,4,4),
  mTxManager(1),
  mLightingEnv(1u),
  mCamera( 2.0f, vec2(0.0f,0.0f), 1.0f ),
@@ -251,39 +251,39 @@ public:
 
     //Create a texture
     Image image("../resources/R2D2_D.png");
-    mColorTexture = mRenderManager.Add2DTexture( image );
+    mColorTexture = mRenderer.Add2DTexture( image );
     Image imageNormal("../resources/R2D2_N.png");
-    mNormalTexture = mRenderManager.Add2DTexture( imageNormal,false );
+    mNormalTexture = mRenderer.Add2DTexture( imageNormal,false );
     Image imageSpecular("../resources/R2D2_S.png");
-    mSpecularTexture = mRenderManager.Add2DTexture( imageSpecular );
+    mSpecularTexture = mRenderer.Add2DTexture( imageSpecular );
 
     //Create a shader
-    mShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
-    mQuadShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceTexture, (const u8**)gFragmentShaderSourceTexture);
-    mAABBShader = mRenderManager.AddProgram((const u8**)gVertexShaderSourceAABB, (const u8**)gFragmentShaderSourceAABB);
-    mSkyboxShader = mRenderManager.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
+    mShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceDiffuse, (const u8**)gFragmentShaderSourceDiffuse);
+    mQuadShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceTexture, (const u8**)gFragmentShaderSourceTexture);
+    mAABBShader = mRenderer.AddProgram((const u8**)gVertexShaderSourceAABB, (const u8**)gFragmentShaderSourceAABB);
+    mSkyboxShader = mRenderer.AddProgram((const u8**)gVertexShaderSkybox, (const u8**)gFragmentShaderSkybox);
 
     //Load meshes
-    mMesh = mRenderManager.AddMeshFromFile( "../resources/R2D2.dae" );
-    Mesh mesh = mRenderManager.GetMesh(mMesh);
+    mMesh = mRenderer.AddMeshFromFile( "../resources/R2D2.dae" );
+    Mesh mesh = mRenderer.GetMesh(mMesh);
 
     mTxId0 = mTxManager.CreateTransform();
     mTxManager.UpdatePosition( mTxId0, Negate(mesh.mAABB.mCenter) );
     mTxManager.Update();
 
-    mQuad = mRenderManager.CreateQuad(Dodo::uvec2(2u,2u),true,false );
+    mQuad = mRenderer.CreateQuad(Dodo::uvec2(2u,2u),true,false );
 
     //Set GL state
-    mRenderManager.SetCullFace( CULL_BACK );
-    mRenderManager.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
-    mRenderManager.SetClearColor( vec4(0.1f,0.0f,0.65f,1.0f));
-    mRenderManager.SetClearDepth( 1.0f );
+    mRenderer.SetCullFace( CULL_BACK );
+    mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
+    mRenderer.SetClearColor( vec4(0.1f,0.0f,0.65f,1.0f));
+    mRenderer.SetClearDepth( 1.0f );
 
-    mFbo =  mRenderManager.AddFrameBuffer();
-    mColorAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mFbo =  mRenderer.AddFrameBuffer();
+    mColorAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_RGBA8 ));
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( mWindowSize.x, mWindowSize.y, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
 
     //Create cube map
     Image cubemapImages[6];
@@ -294,7 +294,7 @@ public:
     cubemapImages[3].LoadFromFile( "../resources/sky-box0/yneg.png", false);
     cubemapImages[4].LoadFromFile( "../resources/sky-box0/zpos.png", false);
     cubemapImages[5].LoadFromFile( "../resources/sky-box0/zneg.png", false);
-    mCubeMap0 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+    mCubeMap0 = mRenderer.AddCubeTexture(&cubemapImages[0]);
     ProjectCubeMapToSH( &mSphericalHarmonics0[0], &cubemapImages[0] );
 
     cubemapImages[0].LoadFromFile( "../resources/sky-box1/posx.jpg", false);
@@ -303,81 +303,81 @@ public:
     cubemapImages[3].LoadFromFile( "../resources/sky-box1/negy.jpg", false);
     cubemapImages[4].LoadFromFile( "../resources/sky-box1/posz.jpg", false);
     cubemapImages[5].LoadFromFile( "../resources/sky-box1/negz.jpg", false);
-    mCubeMap1 = mRenderManager.AddCubeTexture(&cubemapImages[0]);
+    mCubeMap1 = mRenderer.AddCubeTexture(&cubemapImages[0]);
     ProjectCubeMapToSH( &mSphericalHarmonics1[0], &cubemapImages[0] );
   }
 
   void Render()
   {
-    mRenderManager.BindFrameBuffer( mFbo );
-    mRenderManager.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.BindFrameBuffer( mFbo );
+    mRenderer.ClearBuffers(COLOR_BUFFER | DEPTH_BUFFER );
 
     //Draw skybox
-    mRenderManager.UseProgram( mSkyboxShader );
+    mRenderer.UseProgram( mSkyboxShader );
     if( mLightingEnv == 0 )
     {
-      mRenderManager.BindCubeTexture( mCubeMap0, 0 );
+      mRenderer.BindCubeTexture( mCubeMap0, 0 );
     }
     else
     {
-      mRenderManager.BindCubeTexture( mCubeMap1, 0 );
+      mRenderer.BindCubeTexture( mCubeMap1, 0 );
     }
 
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uTexture0"), 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mSkyboxShader,"uViewProjectionInverse"), mSkyBoxTransform );
-    mRenderManager.DisableDepthWrite();
-    mRenderManager.SetupMeshVertexFormat( mQuad );
-    mRenderManager.DrawMesh( mQuad );
-    mRenderManager.EnableDepthWrite();
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mSkyboxShader,"uTexture0"), 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mSkyboxShader,"uViewProjectionInverse"), mSkyBoxTransform );
+    mRenderer.DisableDepthWrite();
+    mRenderer.SetupMeshVertexFormat( mQuad );
+    mRenderer.DrawMesh( mQuad );
+    mRenderer.EnableDepthWrite();
 
     //Draw model
     mat4 modelMatrix;
     mTxManager.GetWorldTransform( mTxId0, &modelMatrix );
-    mRenderManager.UseProgram( mShader );
-    mRenderManager.Bind2DTexture( mColorTexture, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture0"), 0 );
-    mRenderManager.Bind2DTexture( mNormalTexture, 1 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture1"), 1 );
-    mRenderManager.Bind2DTexture( mSpecularTexture, 2 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uTexture2"), 2 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModelView"), modelMatrix * mCamera.txInverse );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"uModel"), modelMatrix );
+    mRenderer.UseProgram( mShader );
+    mRenderer.Bind2DTexture( mColorTexture, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uTexture0"), 0 );
+    mRenderer.Bind2DTexture( mNormalTexture, 1 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uTexture1"), 1 );
+    mRenderer.Bind2DTexture( mSpecularTexture, 2 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uTexture2"), 2 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelViewProjection"), modelMatrix * mCamera.txInverse * mProjection );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModelView"), modelMatrix * mCamera.txInverse );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"uModel"), modelMatrix );
 
     if( mLightingEnv == 0 )
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics0[0], 9 );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics0[0], 9 );
     }
     else
     {
-      mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics1[0], 9 );
+      mRenderer.SetUniform( mRenderer.GetUniformLocation(mShader,"shCoeff"), &mSphericalHarmonics1[0], 9 );
     }
 
-    mRenderManager.SetupMeshVertexFormat( mMesh );
-    mRenderManager.DrawMesh( mMesh );
+    mRenderer.SetupMeshVertexFormat( mMesh );
+    mRenderer.DrawMesh( mMesh );
 
     //Draw quad with offscreen color buffer
-    mRenderManager.BindFrameBuffer( 0 );
-    mRenderManager.ClearBuffers( COLOR_BUFFER | DEPTH_BUFFER );
-    mRenderManager.UseProgram( mQuadShader );
-    mRenderManager.Bind2DTexture( mColorAttachment, 0 );
-    mRenderManager.SetUniform( mRenderManager.GetUniformLocation(mQuadShader,"uTexture0"), 0 );
-    mRenderManager.SetupMeshVertexFormat( mQuad );
-    mRenderManager.DrawMesh( mQuad );
+    mRenderer.BindFrameBuffer( 0 );
+    mRenderer.ClearBuffers( COLOR_BUFFER | DEPTH_BUFFER );
+    mRenderer.UseProgram( mQuadShader );
+    mRenderer.Bind2DTexture( mColorAttachment, 0 );
+    mRenderer.SetUniform( mRenderer.GetUniformLocation(mQuadShader,"uTexture0"), 0 );
+    mRenderer.SetupMeshVertexFormat( mQuad );
+    mRenderer.DrawMesh( mQuad );
   }
 
   void OnResize(size_t width, size_t height )
   {
-    mRenderManager.SetViewport( 0, 0, width, height );
+    mRenderer.SetViewport( 0, 0, width, height );
     mProjection = ComputePerspectiveProjectionMatrix( 1.5f,(f32)width / (f32)height,0.01f,500.0f );
     ComputeInverse( mProjection, mProjectionI );
     //Recreate framebuffer attachments to match new size
-    mRenderManager.RemoveTexture(mColorAttachment);
-    mRenderManager.RemoveTexture(mDepthStencilAttachment);
-    mColorAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
-    mDepthStencilAttachment = mRenderManager.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
-    mRenderManager.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
-    mRenderManager.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
+    mRenderer.RemoveTexture(mColorAttachment);
+    mRenderer.RemoveTexture(mDepthStencilAttachment);
+    mColorAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_RGBA8 ));
+    mDepthStencilAttachment = mRenderer.Add2DTexture( Image( width, height, 0, FORMAT_GL_DEPTH_STENCIL ));
+    mRenderer.Attach2DColorTextureToFrameBuffer( mFbo, 0, mColorAttachment );
+    mRenderer.AttachDepthStencilTextureToFrameBuffer( mFbo, mDepthStencilAttachment );
   }
 
   void ComputeSkyBoxTransform()
