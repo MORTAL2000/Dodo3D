@@ -44,10 +44,10 @@ public:
 
   App()
   :GLApplication("Demo",600,600,4,4),
-   mImageResolution(400,400),
-   mTileSize(100,100),
+   mImageResolution(800,800),
+   mTileSize(200,200),
    mRaytracer(),
-   mCamera( 70.0f, 0.2f, 5.0f, mImageResolution.x, mImageResolution.y ),
+   mCamera( 70.0f, 0.05f, 5.0f, mImageResolution.x, mImageResolution.y ),
    mScene(),
    mMousePosition(0.0f,0.0f),
    mMouseButtonPressed(false)
@@ -60,15 +60,16 @@ public:
   u32 GenerateMaterials()
   {
     RayTracer::Scene::Material m0;
-    m0.albedo = vec3(0.8f,0.05f,0.05f);
-    m0.roughness = 0.0f;
-    m0.metalness = 1.0f;
-    mScene.AddMaterial( m0 );
 
     m0.albedo = vec3(0.8f,0.8f,0.8f);
     m0.roughness = 0.2f;
     m0.metalness = 0.0f;
     mScene.AddMaterial( m0 );
+
+    m0.albedo = vec3(0.8f,0.05f,0.05f);
+    m0.roughness = 0.0f;
+    m0.metalness = 1.0f;
+    mScene.AddMaterial( m0 );    
 
     m0.albedo = vec3(0.05f,0.85f,0.05f);
     m0.roughness = 0.2f;
@@ -97,7 +98,7 @@ public:
     RayTracer::Scene::Sphere ground;
     ground.center = vec3(0.0f,-100000.0f,0.0f);
     ground.radius = 100000.0f - 1.0f;
-    ground.material = 4;
+    ground.material = 0;
     mScene.AddSphere( ground );
 
     std::vector<RayTracer::Scene::Sphere> spheres(sphereCount);

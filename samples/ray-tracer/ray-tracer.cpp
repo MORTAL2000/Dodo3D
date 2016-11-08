@@ -127,6 +127,10 @@ vec3 RayTracer::Scene::GetColor(vec3 rayOrigin,  vec3 rayDirection, u32 iteratio
   vec3 lightDirection = Normalize( vec3(1.0f,1.0f,0.3f) );
   vec3 color;
   Hit hit;
+  
+  if( iteration == iterationMax-1 )
+	  return vec3(0.0f,0.0f,0.0f);
+
   if( iteration < iterationMax && Intersect(rayOrigin, rayDirection, 0.01f, 1000.0f, hit ) )
   {
     vec3 attenuation;
@@ -304,14 +308,14 @@ void RayTracer::Renderer::Tile::Run()
   vec3 rayDirection;
   vec3 rayOrigin;
 	
-	uvec2 tileBounds = mTileOrigin + mTileSize;
+  uvec2 tileBounds = mTileOrigin + mTileSize;
   for( u32 row(mTileOrigin.y); row<tileBounds.y; ++row )
   {
     for( u32 column(mTileOrigin.x); column<tileBounds.x; ++column )
     {
-			u32 iterationCount(0);
+      u32 iterationCount(0);
       mCamera->GenerateRayWithDOF( row, column, &rayOrigin, &rayDirection );
-			vec3 color = mScene->GetColor( rayOrigin, rayDirection, 4, iterationCount );
+      vec3 color = mScene->GetColor( rayOrigin, rayDirection, 4, iterationCount );
       mAccumulationBuffer->Accumulate( color, row, column );
     }
   }

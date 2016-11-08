@@ -124,7 +124,7 @@ const char* gFragmentShaderPointLight[] = {
                                            "  vec3 GBufferNormal = normalize( texture(uTexture1,uv).xyz );\n"
                                            "  float attenuation =  ( uRadius - length(uLightPositionViewSpace-GBufferPosition) ) / uRadius;\n"
                                            "  float NdotL = max( 0.0, dot( GBufferNormal, normalize(uLightPositionViewSpace - GBufferPosition) ) );\n "
-                                           "  vec3 reflection = normalize( -reflect( vec3(0.0,0.0,1.0), GBufferNormal));\n"
+                                           "  vec3 reflection = normalize( -reflect( -normalize(GBufferPosition), GBufferNormal));\n"
                                            "  float specular = pow(max(dot(reflection,normalize(uLightPositionViewSpace - GBufferPosition)),0.0),100.0);\n"
                                            "  color = attenuation * ( NdotL * vec4(uLightColor,1.0) * texture(uTexture0, uv) + specular*vec4(uLightColor,1.0) );\n"
                                            "}\n"
@@ -140,6 +140,7 @@ public:
  mCamera( vec3(0.0f,0.0f,50.0f), vec2(0.0f,0.0f), 100.0f ),
  mMousePosition(0.0f,0.0f),
  mMouseButtonPressed(false),
+ mAnimateLights( true ),
  mMatrixBuffer(0)
 {}
 
@@ -223,8 +224,11 @@ public:
 
   void Render()
   {
-    //Animate lights
-    AnimateLights( GetTimeDelta() );
+    if(mAnimateLights)
+    {
+      AnimateLights( GetTimeDelta() );
+    }
+
     mRenderer.SetCullFace( CULL_BACK );
     //Build GBuffer
     mRenderer.SetDepthTest( DEPTH_TEST_LESS_EQUAL );
@@ -369,6 +373,11 @@ public:
           UpdateMatrixBuffer();
           break;
         }
+        case KEY_SPACE_BAR:
+        {
+          mAnimateLights = !mAnimateLights;
+          break;
+        }
         default:
           break;
       }
@@ -407,6 +416,8 @@ private:
 
   vec2 mMousePosition;
   bool mMouseButtonPressed;
+
+  bool mAnimateLights;
 
   vec3 mLightPosition[LIGHT_COUNT];
   vec3 mLightColor[LIGHT_COUNT];

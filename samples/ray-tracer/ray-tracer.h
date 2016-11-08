@@ -126,7 +126,7 @@ private:
     void Run();
 
     AccumulationBuffer* mAccumulationBuffer;
-		uvec2 mTileOrigin;
+    uvec2 mTileOrigin;
     uvec2 mTileSize;    
     Scene* mScene;
     Camera* mCamera;

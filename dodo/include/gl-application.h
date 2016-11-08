@@ -13,6 +13,7 @@ enum Key
   KEY_DOWN = 1,
   KEY_LEFT = 2,
   KEY_RIGHT = 3,
+  KEY_SPACE_BAR = 4,
 
   KEY_A = 'a',
   KEY_B = 'b',

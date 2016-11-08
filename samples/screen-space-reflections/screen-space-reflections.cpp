@@ -82,7 +82,7 @@ const char* gFragmentShaderFullscreen[] = {
                                               "uniform mat4 uProjection;\n"
                                               "uniform mat4 uProjectionInverse;\n"
                                               "uniform vec2 uCameraNearFar;\n"
-                                              "float stepDelta = 0.01;\n"
+                                              "float stepDelta = 0.02;\n"
                                               "int maxStepCount = 200;\n"
                                               "out vec4 color;\n"
 
@@ -108,7 +108,7 @@ const char* gFragmentShaderFullscreen[] = {
                                               "    vec3 reflectionVectorViewSpace = -reflect( viewVector_viewSpace, normal_viewSpace);\n"
                                               "    vec3 reflectionVectorProjectionSpace = (uProjection * vec4(reflectionVectorViewSpace,0.0)).xyz;\n"
                                               "    reflectionVectorProjectionSpace = reflectionVectorProjectionSpace * stepDelta;\n"
-                                              "    vec3 positionInRay = vec3(uv + reflectionVectorProjectionSpace.xy*5.0, 0.0);\n"
+                                              "    vec3 positionInRay = vec3(uv + reflectionVectorProjectionSpace.xy*10.0, 0.0);\n"
                                               "    positionInRay.z = LinearizeDepth(texture2D( uDepthStencilBuffer, positionInRay.xy).r);\n"
                                               "    int sampleCount = 0;\n"
                                               "    while(positionInRay.x <= 1.0 && positionInRay.x >= 0.0 && positionInRay.y <= 1.0 && positionInRay.y >= 0.0 && positionInRay.z <= 1.0 && positionInRay.z >= 0.0 && sampleCount < maxStepCount )\n"

@@ -293,6 +293,8 @@ Key GLApplication::KeyFromKeyCode( unsigned int keycode )
       return KEY_Z;
     case 53:
       return KEY_X;
+    case 65:
+      return KEY_SPACE_BAR;
 
   }
 
